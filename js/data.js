@@ -42,7 +42,10 @@ function normalize(d){
       weights: Array.isArray(prof.weights) ? prof.weights.slice(0, 5000).filter(function(x){ return x && safeDate(x.date) && +x.weight > 0; }).map(function(x){ return { id: safeId(x.id), date: x.date, weight: safeNum(x.weight, 400) }; }) : [] },
     meta: cleanMeta(d.meta),
     routines: Array.isArray(d.routines) ? d.routines.slice(0, 50).filter(function(r){ return r && r.name && Array.isArray(r.machines); }).map(function(r){
-      return { id: safeId(r.id), name: safeStr(r.name, 30), machines: r.machines.slice(0, 40).map(function(m){ return safeStr(m); }).filter(Boolean) }; }) : [],
+      var o = { id: safeId(r.id), name: safeStr(r.name, 30), machines: r.machines.slice(0, 40).map(function(m){ return safeStr(m); }).filter(Boolean) };
+      if (r.warm === false) o.warm = false;
+      var g = cleanGoals(r.goals); if (Object.keys(g).length) o.goals = g;
+      return o; }) : [],
     notes: cleanNotes(d.notes),
     active: d.active && typeof d.active.rid === "string" && safeDate(d.active.date) ? { rid: safeId(d.active.rid), date: d.active.date, done: cleanDone(d.active.done) } : null,
     settings: { rest: [0,60,90,120].indexOf(+st.rest) >= 0 ? +st.rest : 90, warmup: st.warmup !== false },
@@ -71,6 +74,42 @@ function cleanMeta(m){
     out[name] = o;
   });
   return out;
+}
+function cleanGoals(g){
+  var out = {}; if (!g || typeof g !== "object") return out;
+  Object.keys(g).slice(0, 40).forEach(function(k){
+    var v = g[k], n = safeStr(k); if (!n || !v || typeof v !== "object") return;
+    var o = { t: safeStr(v.t, 30) };
+    if (Array.isArray(v.r)) o.r = v.r.slice(0, 3).map(function(x){ return Math.round(safeNum(x, 1000)); });
+    if (v.d) o.d = Math.round(safeNum(v.d, 3600));
+    if (v.m) o.m = safeNum(v.m, 600);
+    out[n] = o;
+  });
+  return out;
+}
+/* Programmes prêts à l'emploi : type et groupe de chaque exercice, objectif affiché et valeurs pré-remplies */
+var TEMPLATES = [
+  { key: "domicile", name: "Séance à domicile", desc: "25 à 30 min sans matériel, 3 fois par semaine avec un jour de repos entre deux.", warm: false, ex: [
+    ["Échauffement", "sol", "autre", { t: "5 min", r: [0,0,0], d: 300 }],
+    ["Pompes classiques", "sol", "pecs", { t: "3 × 12", r: [12,12,12] }],
+    ["Pompes inclinées", "sol", "pecs", { t: "2 × 12", r: [12,12,0] }],
+    ["Gainage latéral", "sol", "abdos", { t: "3 × 30 s par côté", r: [0,0,0], d: 30 }],
+    ["Mountain climbers", "sol", "abdos", { t: "3 × 30 s", r: [0,0,0], d: 30 }],
+    ["Squats", "sol", "jambes", { t: "3 × 15", r: [15,15,15] }],
+    ["Marche rapide ou vélo", "course", "cardio", { t: "5 à 10 min", m: 8 }]
+  ] }
+];
+function addTemplate(key){
+  var t = TEMPLATES.find(function(x){ return x.key === key; }); if (!t) return null;
+  var goals = {};
+  t.ex.forEach(function(e){
+    var m = state.meta[e[0]] = state.meta[e[0]] || {};
+    if (!m.equip) m.equip = e[1]; if (!m.group) m.group = e[2];
+    goals[e[0]] = e[3];
+  });
+  var r = { id: uid(), name: t.name, machines: t.ex.map(function(e){ return e[0]; }), goals: goals };
+  if (t.warm === false) r.warm = false;
+  state.routines.push(r); return r;
 }
 function cleanNotes(n){
   var out = {}; if (!n || typeof n !== "object") return out;

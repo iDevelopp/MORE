@@ -223,13 +223,28 @@ $("recordList").addEventListener("click", function(e){ var b = e.target.closest(
    Mon corps
    ========================================================= */
 function sortedWeights(){ return state.profile.weights.slice().sort(function(a,b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; }); }
+/* Catégories de l'IMC chez l'adulte (OMS) : mêmes seuils pour tous, quel que soit le sexe */
+function imcCat(v){
+  if (v < 18.5) return { label: "Insuffisance pondérale", tone: "warn" };
+  if (v < 25)   return { label: "Corpulence normale", tone: "good" };
+  if (v < 30)   return { label: "Surpoids", tone: "warn" };
+  return { label: "Obésité", tone: "bad" };
+}
+function imcGauge(v){
+  var c = imcCat(v), pos = Math.min(100, Math.max(0, (v - 15) / 20 * 100));
+  return '<div class="imc" role="img" aria-label="IMC '+kg(v)+' : '+c.label+'">'
+    + '<div class="imc-bar"><i style="width:17.5%;background:var(--warn)"></i><i style="width:32.5%;background:var(--good)"></i><i style="width:25%;background:var(--warn)"></i><i style="width:25%;background:var(--bad)"></i>'
+    + '<b style="left:'+pos.toFixed(1)+'%"></b></div>'
+    + '<div class="imc-txt"><span style="color:var(--'+c.tone+')">'+c.label+'</span><span>18,5 · 25 · 30</span></div></div>';
+}
 function renderBody(){
   var w = sortedWeights(), last = w[w.length-1], h = state.profile.height;
   var imc = last && h ? last.weight / Math.pow(h/100, 2) : null, diff = w.length > 1 ? last.weight - w[0].weight : null;
   $("bodyStats").innerHTML =
       '<div class="stat"><div class="v">'+(last ? kg(last.weight) : "–")+'</div><div class="l">poids (kg)</div></div>'
     + '<div class="stat"><div class="v">'+(h ? h : "–")+'</div><div class="l">taille (cm)</div></div>'
-    + '<div class="stat"><div class="v">'+(imc ? kg(imc) : "–")+'</div><div class="l">IMC</div></div>';
+    + '<div class="stat"><div class="v"'+(imc ? ' style="color:var(--'+imcCat(imc).tone+')"' : '')+'>'+(imc ? kg(imc) : "–")+'</div><div class="l">IMC</div></div>'
+    + (imc ? imcGauge(imc) : "");
   $("bodyNote").textContent = !last && !h ? "Ajoute ton poids et ta taille pour suivre ton évolution."
     : diff !== null ? (diff > 0 ? "+" : "") + kg(diff) + " kg depuis le " + fmtDate(w[0].date, {day:"numeric", month:"long"}) + " · pesé " + ago(last.date)
     : last ? "Pesé " + ago(last.date) + ". Pèse-toi régulièrement pour voir ta courbe." : "Ajoute ton poids pour calculer ton IMC.";

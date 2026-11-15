@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co; manifest-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MORE">
+<meta name="robots" content="noindex, nofollow">
+<title>MORE</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="icon" type="image/png" href="assets/favicon-32.png">
+<script src="js/theme-boot.js?v=ba1374a3c2"></script>
+<link rel="stylesheet" href="css/style.css?v=bc018c60d7">
+</head>
+<body>
+<div class="splash" id="splash" aria-hidden="true"><div class="splash-tile"><svg class="mark draw-in" viewBox="0 0 256 256" aria-hidden="true"><path class="mk-m" d="M46 204 L84 112 L124 170 L174 60 L212 204" pathLength="1"/><path class="mk-g" d="M124 170 L174 60" pathLength="1"/></svg></div><div class="splash-word">MORE<small>Uplift yourself.</small></div></div>
+<div class="bg" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div></div>
+
+<main class="app">
+  <header class="top">
+    <div>
+      <div class="brand"><svg class="mark" viewBox="0 0 256 256" aria-hidden="true"><path class="mk-m" d="M46 204 L84 112 L124 170 L174 60 L212 204" pathLength="1"/><path class="mk-g" d="M124 170 L174 60" pathLength="1"/></svg><span>MORE</span><em>My Own Rep Evolution</em></div>
+      <h1 id="title">Ta progression</h1>
+      <div class="eyebrow" id="today" style="margin-top:4px"></div>
+    </div>
+    <div class="row">
+      <button class="icon-btn" id="lockBtn" type="button" aria-label="Verrouiller">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      </button>
+      <button class="icon-btn" id="settingsBtn" type="button" aria-label="Réglages">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- PROGRÈS -->
+  <section data-view="progress" class="stack">
+    <div class="tiles">
+      <div class="glass tile"><div class="v" id="tSessions">0</div><div class="l">séances</div></div>
+      <div class="glass tile"><div class="v" id="tPR">0</div><div class="l">records ce mois</div></div>
+      <div class="glass tile"><div class="v" id="tGain">0 %</div><div class="l">progression moy.</div></div>
+    </div>
+    <div class="glass card">
+      <div class="section-head" style="padding:0;align-items:center"><h2>Mon corps</h2><button type="button" class="linkbtn" id="bodyBtn">Mettre à jour</button></div>
+      <div class="body-grid" id="bodyStats"></div>
+      <p class="metric-note" id="bodyNote" style="margin:0"></p>
+    </div>
+    <div class="section-head"><h2>Exercices</h2><span>Touche pour voir la courbe</span></div>
+    <div class="filters" id="filters" role="group" aria-label="Filtrer par groupe musculaire"></div>
+    <div class="list" id="machineList"></div>
+  </section>
+
+  <!-- SÉANCE (programmes) -->
+  <section data-view="workout" class="stack" hidden>
+    <div id="activeWrap" class="stack"></div>
+    <div id="routineWrap" class="stack"></div>
+    <button type="button" class="btn ghost" id="newRoutineBtn">Créer un programme</button>
+  </section>
+
+  <!-- AJOUTER -->
+  <section data-view="add" hidden>
+    <form class="glass card" id="addForm" novalidate>
+      <div class="ff" style="order:1"><span class="lbl">Type d'exercice</span><div class="types" id="typePick" role="radiogroup" aria-label="Type d'exercice"></div></div>
+      <div class="field ff" style="order:2">
+        <label for="fDate">Date de la séance</label>
+        <input class="input" type="date" id="fDate">
+      </div>
+      <div class="field ff" style="order:3">
+        <label for="fMachine">Exercice</label>
+        <input class="input" id="fMachine" list="machinesDL" placeholder="ex. Leg press, Curl, Gainage" autocomplete="off" autocapitalize="sentences">
+        <datalist id="machinesDL"></datalist>
+        <div class="chips" id="recentChips"></div>
+        <div class="hint" id="lastHint"></div>
+        <div id="groupPick" hidden style="margin-top:6px">
+          <span class="lbl">Groupe musculaire</span>
+          <div class="chips" id="groupChips" style="margin-top:8px"></div>
+          <p class="hint" id="groupHint" style="margin:8px 0 0"></p>
+        </div>
+      </div>
+      <div class="field ff" id="weightWrap" style="order:4">
+        <label for="fWeight" id="fWeightLbl">Poids (kg)</label>
+        <div class="stepper">
+          <button type="button" class="step" data-w="-2.5" aria-label="Moins 2,5 kg">−</button>
+          <input class="input" id="fWeight" type="number" inputmode="decimal" step="0.5" min="0" value="40">
+          <button type="button" class="step" data-w="2.5" aria-label="Plus 2,5 kg">+</button>
+        </div>
+        <div id="suggestChip"></div>
+      </div>
+      <div class="field ff" id="repsWrap" style="order:5">
+        <span class="lbl" id="repsLbl">Répétitions des 3 séries</span>
+        <div class="reps" role="group" aria-labelledby="repsLbl">
+          <div><input class="input" id="fR1" type="number" inputmode="numeric" min="0" value="12" aria-label="Série 1"><div class="cap">Série 1</div></div>
+          <div><input class="input" id="fR2" type="number" inputmode="numeric" min="0" value="12" aria-label="Série 2"><div class="cap">Série 2</div></div>
+          <div><input class="input" id="fR3" type="number" inputmode="numeric" min="0" value="12" aria-label="Série 3"><div class="cap">Série 3</div></div>
+        </div>
+        <div class="chips" id="repPresets">
+          <button type="button" class="pick" data-r="8">3 × 8</button>
+          <button type="button" class="pick" data-r="10">3 × 10</button>
+          <button type="button" class="pick" data-r="12">3 × 12</button>
+          <button type="button" class="pick" data-r="15">3 × 15</button>
+        </div>
+      </div>
+      <div class="field ff" id="durWrap" style="order:6" hidden>
+        <span class="lbl" id="durLbl">Durée de l'exercice</span>
+        <div class="two" role="group" aria-labelledby="durLbl">
+          <div><input class="input" id="fDurMin" type="number" inputmode="numeric" min="0" placeholder="0" aria-label="Minutes"><div class="cap">min</div></div>
+          <div><input class="input" id="fDurSec" type="number" inputmode="numeric" min="0" max="59" placeholder="45" aria-label="Secondes"><div class="cap">s</div></div>
+        </div>
+      </div>
+      <div class="ff" id="cardioFields" style="order:7" hidden>
+        <div class="three">
+          <div class="field"><label for="fMin">Durée (min)</label><input class="input" id="fMin" type="number" inputmode="numeric" min="0" placeholder="30"></div>
+          <div class="field"><label for="fKm">Distance (km)</label><input class="input" id="fKm" type="number" inputmode="decimal" step="0.1" min="0" placeholder="4,5"></div>
+          <div class="field"><label for="fInc">Pente (%)</label><input class="input" id="fInc" type="number" inputmode="decimal" step="0.5" min="0" placeholder="0"></div>
+        </div>
+        <p class="metric-note" style="margin:10px 4px 0">Vitesse moyenne : <span class="speed" id="fSpeed">–</span></p>
+      </div>
+      <p class="err ff" id="formErr" role="alert" style="order:9"></p>
+      <button class="btn ff" type="submit" style="order:10">Enregistrer</button>
+    </form>
+  </section>
+
+  <!-- RECORDS -->
+  <section data-view="records" class="stack" hidden>
+    <p class="muted small" style="margin:0 4px">Ton meilleur résultat sur chaque exercice. Un badge PR apparaît dès que tu en bats un.</p>
+    <div id="recordList" class="stack"></div>
+  </section>
+
+  <!-- HISTORIQUE -->
+  <section data-view="history" class="stack" hidden>
+    <div class="glass card">
+      <div class="seg" id="chartSeg" role="tablist" aria-label="Choisir le graphique">
+        <button type="button" data-c="volume" aria-pressed="true">Volume</button>
+        <button type="button" data-c="weight" aria-pressed="false">Poids levé</button>
+        <button type="button" data-c="reps" aria-pressed="false">Reps / poids</button>
+      </div>
+      <div class="section-head" style="padding:0;margin-top:6px"><h2 id="chartTitle">Volume par séance</h2><span id="volAvg"></span></div>
+      <div id="chartMachineWrap" style="margin-top:10px" hidden><label for="chartMachine" class="lbl" style="display:block;margin-bottom:6px">Exercice</label><select class="input" id="chartMachine"></select></div>
+      <div class="chart-wrap" style="margin-top:12px"><svg class="chart" id="volChart" viewBox="0 0 340 210" role="img" aria-label="Graphique de l'historique"></svg></div>
+      <p class="metric-note" id="chartNote" style="margin:10px 4px 0"></p>
+    </div>
+    <div class="glass card">
+      <div class="section-head" style="padding:0;align-items:center">
+        <button type="button" class="linkbtn cal-nav" id="calPrev" aria-label="Mois précédent">‹</button>
+        <h2 class="cal-title" id="calTitle" aria-live="polite"></h2>
+        <button type="button" class="linkbtn cal-nav" id="calNext" aria-label="Mois suivant">›</button>
+      </div>
+      <div class="cal-grid cal-wd" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="cal-grid" id="calGrid"></div>
+      <p class="metric-note" id="calNote" style="margin:10px 4px 0"></p>
+    </div>
+    <div id="historyList" class="stack"></div>
+  </section>
+</main>
+
+<nav class="tabs glass" aria-label="Navigation">
+  <span class="tab-ind" id="tabInd" aria-hidden="true"></span>
+  <button class="tab" type="button" data-tab="progress" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 3 8-8"/><path d="M15 7h5v5"/></svg>Progrès
+  </button>
+  <button class="tab" type="button" data-tab="workout">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>Séance
+  </button>
+  <button class="tab plus" type="button" data-tab="add" aria-label="Ajouter une série">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+  <button class="tab" type="button" data-tab="records">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>Records
+  </button>
+  <button class="tab" type="button" data-tab="history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Historique
+  </button>
+</nav>
+
+<!-- Minuteur de repos -->
+<div class="timer glass" id="timer" hidden role="timer" aria-live="off">
+  <svg class="ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(var(--w),.15)" stroke-width="4"/><circle id="ringArc" cx="18" cy="18" r="15" fill="none" stroke="var(--accent-hi)" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="0" transform="rotate(-90 18 18)"/></svg>
+  <div><div class="lbl muted" id="timerLbl">Repos</div><b id="timerTxt">1:30</b></div>
+  <button type="button" id="timerPlus">+15 s</button>
+  <button type="button" id="timerStop" aria-label="Arrêter le minuteur">✕</button>
+</div>
+
+<!-- Fiche machine -->
+<div class="overlay" id="machineOverlay" hidden>
+  <div class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="grab"></div>
+    <div class="sheet-head">
+      <div style="min-width:0"><div class="eyebrow" id="mSub"></div><h1 id="mTitle"></h1></div>
+      <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div id="mSuggest"></div>
+    <div class="stats" id="mStats"></div>
+    <div class="seg" id="metricSeg"></div>
+    <div class="chart-wrap"><svg class="chart" id="mChart" viewBox="0 0 340 210" role="img" aria-label="Courbe d'évolution"></svg></div>
+    <p class="metric-note" id="metricNote"></p>
+    <details id="explainBox" style="margin:-6px 4px 16px"><summary>C'est quoi, ces courbes ?</summary>
+      <div class="explain">
+        <div><b>Charge</b>Le poids que tu soulèves. Le plus simple à suivre.</div>
+        <div><b>Volume</b>Tout le poids déplacé pendant la séance : poids × total des répétitions. Exemple : 40 kg en 3 × 12 = 40 × 36 = 1 440 kg. Il monte si tu ajoutes du poids <em>ou</em> des répétitions.</div>
+        <div><b>1RM estimé</b>Le poids maximum que tu pourrais soulever une seule fois, calculé à partir de tes séries, sans avoir à le tester.</div>
+      </div>
+    </details>
+    <button class="btn" id="mAdd" type="button">Ajouter une série sur cet exercice</button>
+    <div class="row" style="margin-top:10px">
+      <button class="btn ghost sm" id="mRenameBtn" type="button">Modifier l'exercice</button>
+    </div>
+    <div id="mRename" class="glass card" style="margin-top:10px" hidden>
+      <div class="field"><label for="mGroup">Groupe musculaire</label><select class="input" id="mGroup"></select></div>
+      <div class="field"><label for="mNewName">Nom</label><input class="input" id="mNewName" list="machinesDL" autocomplete="off"></div>
+      <p class="metric-note" style="margin:8px 2px 0">Si tu donnes le nom d'un autre exercice, les deux seront fusionnés.</p>
+      <p class="err" id="mRenameErr"></p>
+      <button class="btn sm" id="mRenameOk" type="button">Valider le nom</button>
+    </div>
+    <div style="margin-top:18px"><h2 style="margin-bottom:6px">Toutes les séances</h2><div id="mEntries"></div></div>
+  </div>
+</div>
+
+<!-- Programme (édition) -->
+<div class="overlay" id="routineOverlay" hidden>
+  <div class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="rTitle">
+    <div class="grab"></div>
+    <div class="sheet-head">
+      <h1 id="rTitle">Programme</h1>
+      <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="stack">
+      <div class="field"><label for="rName">Nom du programme</label><input class="input" id="rName" maxlength="30" placeholder="ex. Haut du corps"></div>
+      <p class="muted small" id="rWarmNote" style="margin:0">Le tapis d'échauffement est ajouté automatiquement en premier (réglable dans les Réglages).</p>
+      <div class="field"><span class="lbl">Exercices (dans l'ordre où tu les touches)</span><div class="chips" id="rPicks"></div></div>
+      <div class="field"><label for="rNew">Ajouter un exercice</label>
+        <div class="row"><input class="input" id="rNew" list="machinesDL" placeholder="Nom de l'exercice"><button type="button" class="btn ghost sm" id="rNewBtn" style="width:auto;padding:0 18px">Ajouter</button></div>
+      </div>
+      <p class="err" id="rErr"></p>
+      <button class="btn" type="button" id="rSave">Enregistrer le programme</button>
+      <button class="btn danger" type="button" id="rDelete">Supprimer ce programme</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mon corps -->
+<div class="overlay" id="bodyOverlay" hidden>
+  <div class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="bTitle">
+    <div class="grab"></div>
+    <div class="sheet-head">
+      <h1 id="bTitle">Mon corps</h1>
+      <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <form class="glass card" id="bodyForm" novalidate>
+      <div class="field"><label for="bHeight">Taille (cm)</label><input class="input" id="bHeight" type="number" inputmode="numeric" min="100" max="250" placeholder="ex. 178"></div>
+      <div class="field two">
+        <div class="field"><label for="bWeight">Poids (kg)</label><input class="input" id="bWeight" type="number" inputmode="decimal" step="0.1" min="30" max="300" placeholder="ex. 74,5"></div>
+        <div class="field"><label for="bDate">Pesé le</label><input class="input" type="date" id="bDate"></div>
+      </div>
+      <p class="err" id="bodyErr" role="alert"></p>
+      <button class="btn" type="submit">Enregistrer</button>
+    </form>
+    <div id="bodyHist" style="margin-top:18px"></div>
+  </div>
+</div>
+
+<!-- Réglages -->
+<div class="overlay" id="settingsOverlay" hidden>
+  <div class="sheet glass" role="dialog" aria-modal="true" aria-labelledby="sTitle">
+    <div class="grab"></div>
+    <div class="sheet-head set-head">
+      <button class="set-back" id="setBack" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Réglages</button>
+      <h1 id="sTitle">Réglages</h1>
+      <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+
+    <!-- Accueil des réglages -->
+    <div class="set-page" data-sp="root">
+      <button type="button" class="glass set-me" data-go="account">
+        <span id="setAv"></span>
+        <span class="who"><b id="setName"></b><small id="setMail">Compte, avatar, mot de passe</small></span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <div class="glass set-list">
+        <button type="button" class="set-row" data-go="appearance"><span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg></span><span class="set-lbl">Apparence</span><span class="set-val" id="pvTheme"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-row" data-go="warmup"><span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="4.5" r="1.8"/><path d="M8 21l3-6 3 2v5M6 12l3-3 4 1 2 3 3 1M11 15l-2-5"/></svg></span><span class="set-lbl">Échauffement</span><span class="set-val" id="pvWarm"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-row" data-go="rest"><span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg></span><span class="set-lbl">Temps de repos</span><span class="set-val" id="pvRest"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+      <div class="glass set-list">
+        <button type="button" class="set-row" data-go="sync"><span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.6 4.2 4.2 0 0 0 7 18z"/></svg></span><span class="set-lbl">Synchronisation</span><span class="set-val" id="pvSync"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="set-row" data-go="backup"><span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="5" rx="1.5"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/></svg></span><span class="set-lbl">Sauvegarde</span><span class="set-val">Copier, importer</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+      <div class="set-foot">
+        <div class="set-foot-mark"><svg class="mark" viewBox="0 0 256 256" aria-hidden="true"><path class="mk-m" d="M46 204 L84 112 L124 170 L174 60 L212 204" pathLength="1"/><path class="mk-g" d="M124 170 L174 60" pathLength="1"/></svg></div>
+        <b>MORE</b>
+        <span>My Own Rep Evolution · V1.1 · version 1.1</span>
+      </div>
+    </div>
+
+    <!-- Compte -->
+    <div class="set-page" data-sp="account" hidden>
+      <p class="set-note">Connecté en tant que <b id="accName"></b>. <span id="accMode"></span></p>
+      <div class="glass card">
+        <span class="lbl">Avatar</span>
+        <div class="seg av-seg" id="avSeg" style="margin:10px 0 0"></div>
+      </div>
+      <div class="glass card">
+        <h2 style="margin-bottom:12px">Mot de passe</h2>
+        <div class="field"><label for="newPw">Nouveau mot de passe</label><input class="input" id="newPw" type="password" autocomplete="new-password"></div>
+        <div class="field"><label for="newPw2">Confirme-le</label><input class="input" id="newPw2" type="password" autocomplete="new-password"></div>
+        <p class="err" id="pwMsg"></p>
+        <button class="btn ghost" id="savePw" type="button">Changer le mot de passe</button>
+      </div>
+      <div class="row">
+        <button class="btn ghost" id="switchBtn" type="button">Changer de compte</button>
+        <button class="btn danger" id="delAccBtn" type="button">Supprimer</button>
+      </div>
+    </div>
+
+    <!-- Apparence -->
+    <div class="set-page" data-sp="appearance" hidden>
+      <p class="set-note">Choisis l'apparence de MORE. « Auto » suit le réglage de ton iPhone.</p>
+      <div class="seg" id="themeSeg" style="margin:0">
+        <button type="button" data-t="dark" aria-pressed="true">Sombre</button>
+        <button type="button" data-t="light" aria-pressed="false">Clair</button>
+        <button type="button" data-t="auto" aria-pressed="false">Auto</button>
+      </div>
+    </div>
+
+    <!-- Échauffement -->
+    <div class="set-page" data-sp="warmup" hidden>
+      <p class="set-note">Chaque séance commence par le tapis de course, même s'il n'est pas dans le programme.</p>
+      <div class="seg" id="warmSeg" style="margin:0">
+        <button type="button" data-wu="1" aria-pressed="true">Tapis en premier</button>
+        <button type="button" data-wu="0" aria-pressed="false">Non</button>
+      </div>
+    </div>
+
+    <!-- Repos -->
+    <div class="set-page" data-sp="rest" hidden>
+      <p class="set-note">Le minuteur démarre tout seul après chaque série enregistrée.</p>
+      <div class="seg" id="restSeg" style="margin:0">
+        <button type="button" data-s="0" aria-pressed="false">Off</button>
+        <button type="button" data-s="60" aria-pressed="false">1 min</button>
+        <button type="button" data-s="90" aria-pressed="true">1 min 30</button>
+        <button type="button" data-s="120" aria-pressed="false">2 min</button>
+      </div>
+    </div>
+
+    <!-- Synchronisation -->
+    <div class="set-page" data-sp="sync" hidden>
+      <p class="set-note" id="syncState">Sauvegarde tes séances sur un serveur Supabase (gratuit) pour les retrouver sur un autre téléphone.</p>
+      <div id="syncForm" class="glass card stack">
+        <div class="field"><label for="sbUrl">Adresse du projet Supabase</label><input class="input" id="sbUrl" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off"></div>
+        <div class="field"><label for="sbKey">Clé publique (anon key)</label><input class="input" id="sbKey" placeholder="eyJhbGciOi…" autocomplete="off" autocapitalize="off"></div>
+        <div class="field"><label for="sbEmail">E-mail</label><input class="input" id="sbEmail" type="email" autocomplete="email" autocapitalize="off"></div>
+        <div class="field"><label for="sbPw">Mot de passe en ligne</label><input class="input" id="sbPw" type="password" autocomplete="current-password"></div>
+        <div class="field"><label for="sbPhrase">Phrase secrète de chiffrement</label><input class="input" id="sbPhrase" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. banane-tapis-orage-74">
+          <p class="hint" style="margin:2px 0 0">12 caractères minimum. Elle chiffre tes données sur ce téléphone avant l'envoi : ni Supabase ni personne d'autre ne peut les lire. Note-la dans ton Trousseau : si tu l'oublies, la sauvegarde en ligne est perdue.</p></div>
+        <div class="row">
+          <button class="btn sm" id="sbLogin" type="button">Se connecter</button>
+          <button class="btn ghost sm" id="sbSignup" type="button">Créer le compte</button>
+        </div>
+        <details id="sbSetup"><summary>Préparer Supabase (une seule fois)</summary>
+          <div class="explain">
+            <div>1. Crée un projet gratuit sur supabase.com.<br>2. Dans « SQL Editor », colle et lance ce code :</div>
+          </div>
+          <textarea class="input mono" id="sqlBox" readonly style="margin-top:8px">create table if not exists public.carnets (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  data jsonb not null,
+  updated_at timestamptz not null default now(),
+  constraint taille_max check (pg_column_size(data) < 2000000)
+);
+alter table public.carnets enable row level security;
+revoke all on public.carnets from anon;
+grant select, insert, update, delete on public.carnets to authenticated;
+create policy "lire ses données" on public.carnets for select to authenticated using ((select auth.uid()) = user_id);
+create policy "créer ses données" on public.carnets for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "modifier ses données" on public.carnets for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "supprimer ses données" on public.carnets for delete to authenticated using ((select auth.uid()) = user_id);</textarea>
+          <button class="btn ghost sm" id="sqlCopy" type="button" style="margin-top:8px">Copier le code</button>
+          <div class="explain"><div>3. Dans « Project Settings → API », copie l'adresse du projet et la clé <b style="display:inline">anon public</b>.<br>4. Crée vos comptes, puis dans « Authentication → Sign In / Providers », désactive « Allow new users to sign up » pour que personne d'autre ne puisse s'inscrire.<br>5. Chacun choisit sa propre phrase secrète : vos données sont chiffrées séparément.</div></div>
+        </details>
+      </div>
+      <div id="syncOn" class="stack" hidden>
+        <div class="glass card e2e-badge"><span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><span><b>Chiffrement de bout en bout actif</b><br><span class="muted small">AES-GCM 256 bits · clé dérivée de ta phrase secrète, jamais envoyée.</span></span></div>
+        <div class="row">
+          <button class="btn sm" id="sbPush" type="button">Envoyer maintenant</button>
+          <button class="btn ghost sm" id="sbPull" type="button">Récupérer</button>
+        </div>
+        <button class="btn ghost sm" id="sbLogout" type="button">Se déconnecter du serveur</button>
+      </div>
+      <p class="err" id="syncMsg"></p>
+    </div>
+
+    <!-- Sauvegarde -->
+    <div class="set-page" data-sp="backup" hidden>
+      <p class="set-note">Copie tes données pour les garder ailleurs (dans Notes par exemple), ou colle une sauvegarde pour les restaurer.</p>
+      <div class="glass card">
+        <textarea class="input mono" id="backup" aria-label="Données JSON"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="btn ghost sm" id="copyBtn" type="button">Copier</button>
+          <button class="btn ghost sm" id="importBtn" type="button">Importer</button>
+        </div>
+        <p class="err" id="backupMsg"></p>
+      </div>
+      <button class="btn danger" id="resetBtn" type="button">Charger les données d'exemple</button>
+    </div>
+  </div>
+</div>
+
+<!-- Verrou / comptes -->
+<div class="lock" id="lock">
+  <div class="lock-card glass" id="lockCard">
+    <div class="lock-logo"><svg class="mark" viewBox="0 0 256 256" aria-hidden="true"><path class="mk-m" d="M46 204 L84 112 L124 170 L174 60 L212 204" pathLength="1"/><path class="mk-g" d="M124 170 L174 60" pathLength="1"/></svg></div>
+    <h1 class="wordmark">MORE</h1>
+    <div class="acro">My Own Rep Evolution</div>
+    <div class="slogan">Uplift yourself.</div>
+    <p id="lockSub">Choisis ton compte</p>
+    <div id="lockLogin">
+      <div class="acc-list" id="accList"></div>
+      <form id="loginForm" novalidate hidden>
+        <div class="field"><label for="loginPw">Mot de passe</label><input class="input" id="loginPw" type="password" autocomplete="current-password"></div>
+        <p class="err" id="loginErr" role="alert"></p>
+        <button class="btn" type="submit" id="loginBtn">Déverrouiller</button>
+      </form>
+      <button type="button" class="btn ghost" id="newAccBtn" style="margin-top:12px">Créer un compte</button>
+      <button type="button" class="btn ghost" id="restoreAccBtn" style="margin-top:10px">J'ai déjà un compte en ligne</button>
+    </div>
+    <form id="restoreForm" novalidate hidden>
+      <p class="set-note" style="margin:0 0 16px;text-align:center">Retrouve ton compte et tes séances sur ce téléphone.</p>
+      <div class="field" id="rUrlF"><label for="rUrl">Adresse du projet Supabase</label><input class="input" id="rUrl" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off"></div>
+      <div class="field" id="rKeyF"><label for="rKey">Clé publique (anon key)</label><input class="input" id="rKey" autocomplete="off" autocapitalize="off"></div>
+      <div class="field"><label for="rEmail">E-mail</label><input class="input" id="rEmail" type="email" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
+      <div class="field"><label for="rPw">Mot de passe</label><input class="input" id="rPw" type="password" autocomplete="current-password"></div>
+      <div class="field"><label for="rPhrase">Phrase secrète</label><input class="input" id="rPhrase" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+      <p class="hint" style="margin:10px 0 0">Ce mot de passe servira aussi à déverrouiller MORE sur ce téléphone.</p>
+      <p class="err" id="restoreErr" role="alert"></p>
+      <button class="btn" type="submit" id="restoreBtn">Se connecter</button>
+      <button type="button" class="btn ghost" id="cancelRestore" style="margin-top:10px">Annuler</button>
+    </form>
+    <form id="createForm" novalidate hidden>
+      <div class="field"><label for="cName">E-mail ou pseudo</label><input class="input" id="cName" maxlength="60" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="ex. thomas@icloud.com"></div>
+      <div class="field"><label for="cPw">Mot de passe (8 caractères minimum)</label><input class="input" id="cPw" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="cPw2">Confirme le mot de passe</label><input class="input" id="cPw2" type="password" autocomplete="new-password"></div>
+      <label class="check-row" id="cSeedWrap" hidden><input type="checkbox" id="cSeed"> Ajouter mes séances de départ (octobre–novembre)</label>
+      <p class="err" id="createErr" role="alert"></p>
+      <button class="btn" type="submit" id="createBtn">Créer le compte</button>
+      <button type="button" class="btn ghost" id="cancelCreate" style="margin-top:10px">Annuler</button>
+    </form>
+    <div class="demo" id="demoHint">Compte de démonstration : « Moi », mot de passe 1234</div>
+    <div class="demo ver">V1.1 · version 1.1</div>
+    <button type="button" class="btn ghost sm" id="resetApp" style="margin-top:14px;color:var(--muted)">Effacer tous les comptes de ce téléphone</button>
+  </div>
+</div>
+
+<div class="toast glass" id="toast" hidden role="status"></div>
+<script src="js/config.js?v=0c344f4310"></script>
+<script src="js/core.js?v=ec296db756"></script>
+<script src="js/data.js?v=261a7bd77e"></script>
+<script src="js/crypto.js?v=fa384900d3"></script>
+<script src="js/domain.js?v=434e9d2173"></script>
+<script src="js/charts.js?v=dcf175171f"></script>
+<script src="js/views.js?v=765a55e3ef"></script>
+<script src="js/form.js?v=477cc488fe"></script>
+<script src="js/exercise.js?v=576ed1fb5f"></script>
+<script src="js/workout.js?v=ee1e568e97"></script>
+<script src="js/sync.js?v=e63d03939a"></script>
+<script src="js/settings.js?v=7510d24f6b"></script>
+<script src="js/app.js?v=fc8855dc25"></script>
+</body>
+</html>

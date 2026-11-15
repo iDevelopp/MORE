@@ -91,6 +91,7 @@ h2{font-family:var(--font-display);font-weight:600;font-size:17px;margin:0;lette
 .row{display:flex;gap:10px}
 .row > .btn{flex:1}
 .stack{display:flex;flex-direction:column;gap:16px}
+.stack[hidden],.card[hidden]{display:none}
 .muted{color:var(--muted)}
 .small{font-size:13px}
 
@@ -215,6 +216,12 @@ nav.tabs{position:fixed;z-index:5;left:50%;transform:translateX(-50%);bottom:cal
 .stat .v{font-family:var(--font-display);font-weight:600;font-size:18px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .stat .l{font-size:11px;color:var(--muted);margin-top:2px}
 .body-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 10px}
+.imc{grid-column:1/-1;margin-top:4px}
+.imc-bar{position:relative;display:flex;gap:3px;height:6px}
+.imc-bar i{height:100%;border-radius:3px;opacity:.35}
+.imc-bar b{position:absolute;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:var(--text);border:3px solid var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.imc-txt{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;font-weight:500}
+.imc-txt span:last-child{color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums}
 .chart-wrap{padding:12px 6px 6px;border-radius:var(--r-sm);background:transparent;border:1px solid var(--line)}
 .chart{width:100%;height:auto;display:block}
 .chart text{font-family:var(--font);font-size:11px;fill:var(--muted);font-weight:500}

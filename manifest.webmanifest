@@ -1,7 +1,7 @@
 {
   "name": "MORE · My Own Rep Evolution",
   "short_name": "MORE",
-  "start_url": "./",
+  "start_url": "app.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#000000",

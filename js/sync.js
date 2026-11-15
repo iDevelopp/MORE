@@ -141,7 +141,7 @@ function paintSync(){
 }
 $("sbLogin").addEventListener("click", function(){ sbAuth(false); });
 $("sbSignup").addEventListener("click", function(){ sbAuth(true); });
-$("sbPush").addEventListener("click", function(){ var m = $("syncMsg"); m.className = "err muted"; m.textContent = "Envoi…"; sbPush().then(function(){ m.className = "err ok"; m.textContent = "Données envoyées."; }, function(e){ m.className = "err"; m.textContent = syncErr(e); }); });
+$("sbPush").addEventListener("click", function(){ var m = $("syncMsg"); if (!state.sync || !state.sync.access){ m.className = "err"; m.textContent = "Pas connecté : connecte-toi d'abord avec ton compte en ligne."; return; } m.className = "err muted"; m.textContent = "Envoi…"; sbPush().then(function(){ m.className = "err ok"; m.textContent = "Données envoyées."; }, function(e){ m.className = "err"; m.textContent = syncErr(e); }); });
 $("sbPull").addEventListener("click", function(){
   var b = $("sbPull"), m = $("syncMsg");
   armed(b, "Récupérer", "Remplacer les données ici ? Touche encore", function(){

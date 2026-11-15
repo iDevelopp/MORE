@@ -50,7 +50,7 @@ var drafts = {};
 var WARMUP = "Tapis de course";
 /* Liste réelle d'une séance : le tapis passe en premier si l'échauffement est activé */
 function sessionList(r){
-  if (!state.settings.warmup) return r.machines.slice();
+  if (!state.settings.warmup || r.warm === false) return r.machines.slice();
   return [WARMUP].concat(r.machines.filter(function(m){ return m !== WARMUP; }));
 }
 function lastOf(name){ var l = byMachine()[name]; return l ? l[l.length-1] : null; }
@@ -65,20 +65,21 @@ function renderWorkout(){
       var wu = state.settings.warmup && idx === 0 && m === WARMUP ? '<span class="wu">Échauffement</span>' : '';
       var cardio = machineIsCardio(m), entry = done[m] && state.entries.find(function(e){ return e.id === done[m]; });
       if (entry) return '<div class="wk done'+(justDone === m ? " just" : "")+'"><div><div class="wk-name">'+esc(m)+wu+'</div><div class="wk-sub">'+pvTxt(entry)+' · '+detailTxt(entry)+'</div></div><button type="button" class="check" data-undo="'+esc(m)+'" aria-label="Annuler '+esc(m)+'">'+CHECK+'</button></div>';
-      var last = lastOf(m), d = drafts[m] || {}, s = suggest(byMachine()[m]);
+      var last = lastOf(m), d = drafts[m] || {}, s = suggest(byMachine()[m]), g = (r.goals || {})[m] || null;
       var sub = last ? "Dernière fois : " + pvTxt(last) + " · " + detailTxt(last) : "Première fois";
+      if (g && g.t) sub += " · objectif " + g.t;
       if (s && s.up) sub += " · objectif " + s.label;
       var f;
       if (cardio){
         f = '<div class="wk-fields cardio">'
-          + inp(m,"minutes", d.minutes !== undefined ? d.minutes : (last && isC(last) ? last.minutes : ""), "min")
+          + inp(m,"minutes", d.minutes !== undefined ? d.minutes : (last && isC(last) ? last.minutes : (g && g.m ? g.m : "")), "min")
           + inp(m,"km", d.km !== undefined ? d.km : (last && isC(last) ? last.km : ""), "km")
           + inp(m,"incline", d.incline !== undefined ? d.incline : (last && isC(last) ? last.incline : ""), "pente %") + '</div>';
       } else {
-        var tp = typeOf(m), rp = last && !isC(last) ? last.reps : [12,12,12];
+        var tp = typeOf(m), rp = last && !isC(last) ? last.reps : (g && g.r ? g.r : [12,12,12]);
         if (tp === "sol"){
           f = '<div class="wk-fields sol">' + [0,1,2].map(function(i){ return inp(m, "r"+i, d["r"+i] !== undefined ? d["r"+i] : (rp[i] || ""), "série "+(i+1)); }).join("")
-            + inp(m, "dur", d.dur !== undefined ? d.dur : (last && last.kind === "sol" && last.dur ? last.dur : ""), "durée (s)") + '</div>';
+            + inp(m, "dur", d.dur !== undefined ? d.dur : (last && last.kind === "sol" && last.dur ? last.dur : (g && g.d ? g.d : "")), "durée (s)") + '</div>';
         } else {
           var w = d.weight !== undefined ? d.weight : (s && s.w !== null ? s.w : (last ? last.weight : ""));
           f = '<div class="wk-fields">' + inp(m,"weight", w, tp === "halteres" ? "kg / haltère" : "kg")
@@ -96,10 +97,20 @@ function renderWorkout(){
   }
   $("routineWrap").innerHTML = (a ? '<div class="section-head"><h2>Mes programmes</h2></div>' : '<p class="muted small" style="margin:0 4px">Choisis un programme pour démarrer : les poids de la dernière fois (ou suggérés) sont déjà remplis, tu n\'as plus qu\'à valider chaque machine.</p>')
     + (state.routines.length ? state.routines.map(function(r){
-      return '<div class="glass routine"><div class="section-head" style="padding:0"><h2>'+esc(r.name)+'</h2><span>'+sessionList(r).length+' machines</span></div>'
+      return '<div class="glass routine"><div class="section-head" style="padding:0"><h2>'+esc(r.name)+'</h2><span>'+sessionList(r).length+' exercices</span></div>'
         + '<div class="mlist">'+sessionList(r).map(esc).join(" · ")+'</div>'
         + '<div class="row">'+(a ? '' : '<button type="button" class="btn sm" data-start="'+r.id+'">Démarrer</button>')+'<button type="button" class="btn ghost sm" data-edit="'+r.id+'">Modifier</button></div></div>';
-    }).join("") : '<div class="glass empty">Aucun programme pour l\'instant.</div>');
+    }).join("") : '<div class="glass empty">Aucun programme pour l\'instant.</div>')
+    + (function(){
+      var free = TEMPLATES.filter(function(t){ return !state.routines.some(function(r){ return r.name === t.name; }); });
+      if (!free.length || a) return "";
+      return '<div class="section-head" style="margin-top:8px"><h2>Programmes prêts</h2></div>' + free.map(function(t){
+        return '<div class="glass routine"><div class="section-head" style="padding:0"><h2>'+esc(t.name)+'</h2><span>'+t.ex.length+' exercices</span></div>'
+          + '<p class="muted small" style="margin:0">'+esc(t.desc)+'</p>'
+          + '<div class="mlist">'+t.ex.map(function(e){ return esc(e[0]) + ' <span class="muted">'+esc(e[3].t)+'</span>'; }).join(" · ")+'</div>'
+          + '<div class="row"><button type="button" class="btn ghost sm" data-tpl="'+t.key+'">Ajouter à mes programmes</button></div></div>';
+      }).join("");
+    })();
 }
 var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path pathLength="1" d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 var justDone = null;
@@ -156,6 +167,7 @@ $("routineWrap").addEventListener("click", function(e){
     save(); renderWorkout(); window.scrollTo(0,0); toast("C'est parti !"); buzz(); return;
   }
   if ((b = e.target.closest("[data-edit]"))) openRoutine(b.getAttribute("data-edit"));
+  if ((b = e.target.closest("[data-tpl]"))){ var nr = addTemplate(b.getAttribute("data-tpl")); if (nr){ save(); renderAll(); toast("« " + nr.name + " » ajouté à tes programmes"); } }
 });
 $("newRoutineBtn").addEventListener("click", function(){ openRoutine(null); });
 var rDraft = null;

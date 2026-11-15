@@ -23,7 +23,8 @@ MORE est un carnet d'entraînement pensé pour l'iPhone : on note ses séances (
 ## Structure du projet
 
 ```
-index.html               Page unique de l'application
+index.html               Page de présentation (vidéo, accès à l'app)
+app.html                 L'application
 manifest.webmanifest     Nom, icône et couleurs pour l'écran d'accueil
 css/style.css            Styles (thèmes, composants, animations)
 js/config.js             Configuration (mode démo, version)
@@ -45,7 +46,7 @@ assets/                  Icônes de l'application
 supabase/schema.sql      Table et règles de sécurité pour Supabase
 ```
 
-Aucune dépendance, aucune étape de compilation : les fichiers sont servis tels quels. L'ordre des scripts dans `index.html` compte.
+Aucune dépendance, aucune étape de compilation : les fichiers sont servis tels quels. L'ordre des scripts dans `app.html` compte.
 
 ## Installer sur iPhone (GitHub Pages)
 
@@ -127,7 +128,7 @@ python3 -m http.server 8000
 # puis ouvrir http://localhost:8000
 ```
 
-Ne pas ouvrir `index.html` en double-cliquant (`file://`) : la politique de sécurité et le chiffrement exigent une adresse `http://localhost` ou `https://`.
+Ne pas ouvrir `app.html` en double-cliquant (`file://`) : la politique de sécurité et le chiffrement exigent une adresse `http://localhost` ou `https://`.
 
 ## Sécurité
 
