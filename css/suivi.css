@@ -2,7 +2,7 @@
 :root{
   --ink:#000; --surface:#0d0d0e; --surface-2:#1c1c1e; --surface-3:#2c2c2e;
   --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14);
-  --text:#f5f5f7; --muted:#98989f; --accent:#9be22d; --warn:#e8c547;
+  --text:#f5f5f7; --muted:#98989f; --accent:#9be22d; --chart:#f5f5f7; --warn:#e8c547;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
   --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Helvetica,Arial,sans-serif;
   --spring:cubic-bezier(.22,1.2,.36,1); --out:cubic-bezier(.16,1,.3,1);
@@ -43,7 +43,7 @@ h2{margin:40px 0 14px;font-family:var(--display);font-size:22px;font-weight:700;
 .tile b.date{font-size:20px;line-height:1.5;white-space:nowrap}
 
 /* séances */
-.day{padding:18px;border-radius:20px;background:var(--surface);border:1px solid var(--line);margin-bottom:10px}
+.day{scroll-margin-top:92px;padding:18px;border-radius:20px;background:var(--surface);border:1px solid var(--line);margin-bottom:10px}
 .day-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
 .day-head b{font-size:16px}
 .day-head b::first-letter{text-transform:uppercase}
@@ -90,3 +90,42 @@ textarea.input{min-height:90px;resize:vertical}
 .anim>*{animation:rise .7s var(--out) both}
 .anim>:nth-child(2){animation-delay:.05s}.anim>:nth-child(3){animation-delay:.1s}.anim>:nth-child(4){animation-delay:.15s}.anim>:nth-child(n+5){animation-delay:.2s}
 @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+
+/* graphiques et calendrier */
+.card{padding:16px 16px 14px;border-radius:20px;background:var(--surface);border:1px solid var(--line);margin-bottom:10px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:3px;border-radius:11px;background:var(--surface-2);margin-bottom:14px}
+.seg button{border:0;background:transparent;padding:8px 4px;border-radius:9px;font-size:13.5px;font-weight:500;color:var(--text);opacity:.75;cursor:pointer;transition:transform .35s var(--spring),background-color .25s,opacity .2s}
+.seg button:active{transform:scale(.95)}
+.seg button[aria-pressed=true]{background:var(--surface-3);opacity:1;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.sh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.sh h2{margin:0;font-size:17px;letter-spacing:-.01em}
+.sh span{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.exwrap{margin-top:10px}
+.exwrap label{display:block;margin-bottom:6px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+select.input{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 14px) 52%;background-size:6px 6px;background-repeat:no-repeat;padding-right:36px}
+.cv{margin-top:12px;padding:12px 6px 6px;border-radius:14px;border:1px solid var(--line)}
+.cv.swap{animation:rise .45s var(--out)}
+.cv svg{display:block;width:100%;height:auto}
+.cv svg text{fill:var(--muted);font-size:10px;font-family:var(--font)}
+.cv svg .val{fill:var(--text);font-weight:600;font-size:11.5px}
+.cv svg .grid{stroke:var(--line)}
+.cv svg .draw{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1s cubic-bezier(.4,.1,.2,1) forwards}
+.cv svg .fade{opacity:0;animation:fadein .6s .5s ease forwards}
+.cv svg .bar{transform-box:fill-box;transform-origin:50% 100%;animation:grow .7s cubic-bezier(.2,.9,.3,1) both}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes fadein{to{opacity:1}}
+@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.cnote{margin:10px 4px 0;font-size:13px;color:var(--muted)}
+.cal-h{align-items:center}
+.cal-h h2{text-transform:capitalize}
+.nav{width:34px;height:34px;padding:0;border:0;border-radius:50%;background:var(--surface-2);font-size:17px;line-height:1;cursor:pointer}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.cal-wd{margin:14px 0 6px}
+.cal-wd span{font-size:11px;font-weight:500;color:var(--muted);text-align:center}
+.cal-d{height:32px;border-radius:8px;font-size:12px;font-weight:500;display:grid;place-items:center;background:transparent;border:0;color:var(--muted);font-variant-numeric:tabular-nums;padding:0}
+button.cal-d{cursor:pointer;transition:transform .35s var(--spring)}
+button.cal-d:active{transform:scale(.92)}
+.cal-d.on{background:var(--text);color:#000;font-weight:700}
+.cal-d.today{box-shadow:inset 0 0 0 1px var(--text);color:var(--text)}
+.cal-d.on.today{box-shadow:inset 0 0 0 2px var(--accent);color:#000}
+@media (prefers-reduced-motion:reduce){.cv svg .draw{stroke-dashoffset:0}.cv svg .fade{opacity:1}}
