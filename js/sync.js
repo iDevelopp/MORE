@@ -102,7 +102,7 @@ function sbPush(){
   return e2eSeal(exportData()).then(function(blob){
     return sbReq("/rest/v1/carnets?on_conflict=user_id", { method: "POST", prefer: "resolution=merge-duplicates,return=minimal",
       body: { user_id: state.sync.uid, data: blob, updated_at: new Date(state.updatedAt || Date.now()).toISOString() } });
-  }).then(function(){ state.sync.last = Date.now(); persist(); paintSync(); });
+  }).then(function(){ state.sync.last = Date.now(); persist(); paintSync(); return sharePushAll().catch(function(e){ shareErr = e; }); });
 }
 function applyRemote(data){
   var keep = { sync: state.sync, active: state.active }, d = normalize(data);
@@ -133,6 +133,129 @@ function flushPush(){
   clearTimeout(pushTimer); if (!pushPending) return; pushPending = false;
   sbPush().then(function(){ pushWarned = false; }, function(e){ pushPending = true; if (!pushWarned){ pushWarned = true; toast("Synchro en attente : " + syncErr(e).split(".")[0]); } });
 }
+/* =========================================================
+   Partage du suivi (lecture seule + commentaires)
+   Chaque lien a sa propre clé, placée après le # du lien : elle n'est jamais envoyée au serveur.
+   ========================================================= */
+var shareErr = null, shareComments = [];
+function b64u(buf){ return b64(buf).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+function unb64u(s){ s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; return unb64(s); }
+function shareKey(sh){ return crypto.subtle.importKey("raw", unb64u(sh.key), "AES-GCM", false, ["encrypt", "decrypt"]); }
+function shareSeal(sh, obj){
+  return shareKey(sh).then(function(k){ return encrypt(k, obj); }).then(function(enc){ return { v: 1, alg: "AES-GCM-256", iv: enc.iv, ct: enc.data }; });
+}
+function shareOpen(sh, blob){
+  if (!blob || typeof blob.iv !== "string" || typeof blob.ct !== "string") return Promise.reject(new Error("illisible"));
+  return shareKey(sh).then(function(k){ return decrypt(k, { iv: blob.iv, data: blob.ct }); });
+}
+function shareUrl(sh){ return new URL("suivi.html", location.href).href.split("#")[0] + "#" + sh.id + "." + sh.key; }
+/* Ce que voit la personne : 12 derniers mois de séries, types et groupes ; notes et poids seulement si coché */
+function shareSnapshot(sh){
+  var since = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10), meta = {}, notes = {};
+  var ents = state.entries.filter(function(e){ return e.date >= since; }).map(function(e){
+    var o = { date: e.date, machine: e.machine };
+    if (isC(e)){ o.kind = "cardio"; o.minutes = e.minutes; o.km = e.km; o.incline = e.incline; }
+    else { o.reps = e.reps; o.weight = e.weight; if (e.kind === "sol"){ o.kind = "sol"; o.dur = e.dur; } }
+    if (!meta[e.machine]) meta[e.machine] = { equip: typeOf(e.machine), group: groupOf(e.machine) };
+    return o;
+  });
+  if (sh.notes) Object.keys(state.notes).forEach(function(d){ if (d >= since) notes[d] = state.notes[d]; });
+  return { v: 1, name: session ? displayName(session.name) : "", at: Date.now(), entries: ents, meta: meta, notes: notes,
+    weights: sh.weight ? state.profile.weights : [], height: sh.weight ? state.profile.height : null };
+}
+function sharePushAll(){
+  if (!state.shares || !state.shares.length || !state.sync || !state.sync.access || !hasCrypto) return Promise.resolve();
+  return Promise.all(state.shares.map(function(sh){
+    return shareSeal(sh, shareSnapshot(sh)).then(function(blob){
+      return sbReq("/rest/v1/partages?on_conflict=id", { method: "POST", prefer: "resolution=merge-duplicates,return=minimal",
+        body: { id: sh.id, owner: state.sync.uid, data: blob, updated_at: new Date().toISOString() } });
+    });
+  })).then(function(){ shareErr = null; });
+}
+/* Commentaires laissés sur les liens : déchiffrés ici, affichés dans l'historique */
+function fetchComments(){
+  if (!state.shares || !state.shares.length || !state.sync || !state.sync.access || !hasCrypto) return Promise.resolve();
+  return sbReq("/rest/v1/commentaires?select=id,partage_id,data,created_at&order=created_at.desc&limit=300").then(function(rows){
+    return Promise.all((rows || []).map(function(r){
+      var sh = state.shares.find(function(x){ return x.id === r.partage_id; }); if (!sh) return null;
+      return shareOpen(sh, r.data).then(function(o){
+        var text = String(o && o.text || "").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, "").trim().slice(0, 1000);
+        if (!text) return null;
+        return { id: +r.id, share: sh.id, label: sh.label, name: safeStr(o.name, 40) || sh.label, text: text, date: safeDate(o.date), at: Date.parse(r.created_at) || 0 };
+      }, function(){ return null; });
+    }));
+  }).then(function(list){
+    shareComments = list.filter(Boolean);
+    var seen = state.settings.seen || 0, fresh = shareComments.filter(function(c){ return c.at > seen; });
+    if (fresh.length){
+      toast(fresh.length === 1 ? "Nouveau commentaire de " + fresh[0].name : fresh.length + " nouveaux commentaires");
+      state.settings.seen = Math.max.apply(null, shareComments.map(function(c){ return c.at; })); persist();
+    }
+    renderHistory(); paintShares();
+  }, function(){});
+}
+function commentsHtml(d){
+  var l = shareComments.filter(function(c){ return c.date === d; }).sort(function(a, b){ return a.at - b.at; });
+  return l.map(function(c){
+    return '<div class="cmt"><div class="cmt-head"><b>'+esc(c.name)+'</b><span>'+esc(ago(new Date(c.at).toISOString().slice(0, 10)))+' · via « '+esc(c.label)+' »</span>'
+      + '<button type="button" class="del" data-cdel="'+c.id+'" aria-label="Supprimer ce commentaire">✕</button></div><p>'+esc(c.text)+'</p></div>';
+  }).join("");
+}
+function paintShares(){
+  var box = $("shareList"); if (!box) return;
+  var can = ONLINE && state.sync && state.sync.access && state.sync.phrase;
+  $("shareNeed").hidden = !!can; $("shareNew").hidden = !can || state.shares.length >= 10;
+  box.innerHTML = state.shares.map(function(sh){
+    var n = shareComments.filter(function(c){ return c.share === sh.id; }).length;
+    var opts = ["courbes", "séances", "records"].concat(sh.notes ? ["notes"] : [], sh.weight ? ["poids"] : []).join(", ");
+    return '<div class="glass card share"><div class="share-head"><b>'+esc(sh.label)+'</b><span>'+n+' commentaire'+(n > 1 ? "s" : "")+'</span></div>'
+      + '<p class="hint" style="margin:6px 0 12px">Voit : '+esc(opts)+'</p>'
+      + '<div class="row"><button type="button" class="btn sm" data-scopy="'+sh.id+'">Copier le lien</button>'
+      + (navigator.share ? '<button type="button" class="btn ghost sm" data-ssend="'+sh.id+'">Envoyer…</button>' : '') + '</div>'
+      + '<button type="button" class="btn danger sm" data-scut="'+sh.id+'" style="margin-top:10px">Couper ce lien</button></div>';
+  }).join("");
+  $("pvShare").textContent = state.shares.length ? state.shares.length + " lien" + (state.shares.length > 1 ? "s" : "") : "Aucun";
+}
+$("shCreate").addEventListener("click", function(){
+  var m = $("shareMsg"), label = $("shLabel").value.trim(); m.className = "err";
+  if (!label){ m.textContent = "Indique pour qui est ce lien (ex. Coach)."; return; }
+  if (!hasCrypto){ m.textContent = "Ce navigateur ne permet pas le chiffrement."; return; }
+  var sh = { id: b64u(crypto.getRandomValues(new Uint8Array(16))), key: b64u(crypto.getRandomValues(new Uint8Array(32))),
+    label: safeStr(label, 30), notes: $("shNotes").checked, weight: $("shWeight").checked, created: Date.now() };
+  state.shares.push(sh); m.className = "err muted"; m.textContent = "Création du lien…";
+  sharePushAll().then(function(){
+    save(); $("shLabel").value = ""; $("shNotes").checked = false; $("shWeight").checked = false;
+    m.className = "err ok"; m.textContent = "Lien créé : copie-le et envoie-le à " + sh.label + "."; paintShares();
+  }, function(e){
+    state.shares = state.shares.filter(function(x){ return x.id !== sh.id; });
+    m.className = "err"; m.textContent = /partages|does not exist|404/i.test(e && e.message || "") ? "Le partage n'est pas encore activé dans Supabase : copie le code SQL ci-dessous et exécute-le une fois." : syncErr(e);
+  });
+});
+$("shareList").addEventListener("click", function(e){
+  var b, sh, m = $("shareMsg");
+  if ((b = e.target.closest("[data-scopy]"))){
+    sh = state.shares.find(function(x){ return x.id === b.getAttribute("data-scopy"); }); if (!sh) return;
+    var url = shareUrl(sh), done = function(){ b.textContent = "Copié !"; setTimeout(function(){ b.textContent = "Copier le lien"; }, 1800); };
+    try { navigator.clipboard.writeText(url).then(done, function(){ prompt("Copie ce lien :", url); }); } catch(err){ prompt("Copie ce lien :", url); }
+    return;
+  }
+  if ((b = e.target.closest("[data-ssend]"))){
+    sh = state.shares.find(function(x){ return x.id === b.getAttribute("data-ssend"); }); if (!sh) return;
+    navigator.share({ title: "Mon suivi MORE", text: "Mon suivi de muscu sur MORE", url: shareUrl(sh) }).catch(function(){});
+    return;
+  }
+  if ((b = e.target.closest("[data-scut]"))){
+    var id = b.getAttribute("data-scut");
+    armed(b, "Couper ce lien", "Le lien ne marchera plus. Touche encore", function(){
+      sbReq("/rest/v1/partages?id=eq." + encodeURIComponent(id), { method: "DELETE" }).then(function(){
+        state.shares = state.shares.filter(function(x){ return x.id !== id; });
+        shareComments = shareComments.filter(function(c){ return c.share !== id; });
+        save(); paintShares(); renderHistory(); toast("Lien coupé");
+      }, function(err){ m.className = "err"; m.textContent = "Impossible de couper le lien maintenant (" + syncErr(err) + "). Réessaie avec du réseau."; });
+    });
+  }
+});
+$("shareSqlCopy").addEventListener("click", function(){ copyText($("shareSql"), $("shareSqlCopy"), "Copier le code"); });
 /* Si l'adresse et la clé Supabase sont dans js/config.js, l'utilisateur n'a plus à les saisir */
 var SB_PRESET = !!(CONFIG.supabaseUrl && CONFIG.supabaseKey);
 /* Mode en ligne : le compte MORE est le compte Supabase (plus de compte purement local) */
@@ -160,7 +283,7 @@ function verifyOnline(acc, pw){
     if (!j || !j.access_token) return;
     state.sync.url = sbCfg().url; state.sync.key = sbCfg().key;
     state.sync.access = j.access_token; state.sync.refresh = j.refresh_token || state.sync.refresh; persist();
-    if (state.sync.phrase) return sbPull(true);
+    if (state.sync.phrase) return sbPull(true).then(fetchComments, fetchComments);
   }).then(null, function(e){
     if (e && /invalid login/i.test(e.message || "")){
       var email = acc.name; logout(); openRestore(false); $("rEmail").value = email;

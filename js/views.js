@@ -60,12 +60,21 @@ function renderHistory(){
       : (note ? '<div class="note">'+esc(note)+'</div>' : '') + '<button type="button" class="note-btn" data-note="'+d+'">'+(note ? "Modifier la note" : "+ Ajouter une note")+'</button>';
     return '<div class="glass day" id="d-'+d+'" style="scroll-margin-top:16px"><div class="day-head"><b>'+esc(fmtDate(d,{weekday:"long",day:"numeric",month:"long"}))+'</b><span>'+l.length+' machine'+(l.length>1?"s":"")+'</span></div>'
       + l.map(function(e){ return '<div class="line"><span>'+esc(e.machine)+(prs[e.id] ? ' <span class="chip pr">PR</span>' : '')+'</span><span class="kg">'+pvTxt(e)+'</span><span class="rp">'+detailTxt(e)+'</span></div>'; }).join("")
-      + noteHtml + '</div>';
+      + noteHtml + commentsHtml(d) + '</div>';
   }).join("");
   if (editingNote){ var ni = $("noteInput"); if (ni) ni.focus(); }
 }
 $("historyList").addEventListener("click", function(e){
   var b;
+  if ((b = e.target.closest("[data-cdel]"))){
+    var cid = +b.getAttribute("data-cdel");
+    armed(b, "✕", "Supprimer ?", function(){
+      sbReq("/rest/v1/commentaires?id=eq." + cid, { method: "DELETE" }).then(function(){
+        shareComments = shareComments.filter(function(c){ return c.id !== cid; }); renderHistory(); paintShares(); toast("Commentaire supprimé");
+      }, function(err){ toast(syncErr(err).split(".")[0]); });
+    });
+    return;
+  }
   if ((b = e.target.closest("[data-note]"))){ editingNote = b.getAttribute("data-note"); renderHistory(); return; }
   if (e.target.closest("[data-note-cancel]")){ editingNote = null; renderHistory(); return; }
   if ((b = e.target.closest("[data-note-save]"))){

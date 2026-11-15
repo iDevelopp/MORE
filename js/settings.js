@@ -20,13 +20,14 @@ $("settingsBtn").addEventListener("click", function(){
   openOv("settingsOverlay");
 });
 /* Navigation dans les réglages : accueil → rubrique */
-var SET_TITLES = { root: "Réglages", account: "Compte", appearance: "Apparence", warmup: "Échauffement", rest: "Temps de repos", sync: "Synchronisation", backup: "Sauvegarde" };
+var SET_TITLES = { root: "Réglages", account: "Compte", appearance: "Apparence", warmup: "Échauffement", rest: "Temps de repos", sync: "Synchronisation", share: "Partage du suivi", backup: "Sauvegarde" };
 function paintSetRoot(){
   if (session){ $("setAv").innerHTML = avatar(session.name); $("setName").textContent = displayName(session.name); $("setMail").textContent = isEmail(session.name) ? session.name : "Compte, avatar, mot de passe"; }
   var tp = themePref(); $("pvTheme").textContent = { dark: "Sombre", light: "Clair", auto: "Auto" }[tp] || "Sombre";
   $("pvWarm").textContent = state.settings.warmup ? "Tapis" : "Non";
   var r = state.settings.rest; $("pvRest").textContent = !r ? "Off" : r === 90 ? "1 min 30" : r % 60 ? r + " s" : (r / 60) + " min";
   $("pvSync").textContent = state.sync && state.sync.access ? "Connecté" : "Non connecté";
+  paintShares();
 }
 function showSetPage(name, instant){
   document.querySelectorAll("#settingsOverlay .set-page").forEach(function(p){ p.hidden = p.getAttribute("data-sp") !== name; });

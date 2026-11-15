@@ -486,6 +486,14 @@ nav.tabs{position:fixed}
 .set-val{white-space:nowrap}
 
 .check-row{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:14px;color:var(--text)}
+.share-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.share-head b{font-size:17px}
+.share-head span{font-size:12px;color:var(--muted)}
+.cmt{margin-top:10px;padding:12px 14px;border-radius:var(--r-sm);background:var(--surface-2);border-left:3px solid var(--accent)}
+.cmt-head{display:flex;align-items:center;gap:8px;font-size:13px}
+.cmt-head span{color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmt-head .del{flex:none}
+.cmt p{margin:6px 0 0;font-size:14.5px;white-space:pre-wrap}
 .check-row input{width:20px;height:20px;accent-color:var(--accent)}
 .check-row[hidden]{display:none}
 .e2e-badge{display:flex;align-items:center;gap:14px;padding:14px 16px}

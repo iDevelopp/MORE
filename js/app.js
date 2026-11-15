@@ -287,7 +287,7 @@ var hiddenAt = 0;
 document.addEventListener("visibilitychange", function(){
   if (document.hidden){ hiddenAt = Date.now(); if (session) flushPush(); return; }
   if (session && hiddenAt && Date.now() - hiddenAt > 5 * 60 * 1000){ logout(); toast("Verrouillé après 5 min d'absence"); return; }
-  if (session && hiddenAt && Date.now() - hiddenAt > 30 * 1000 && state.sync && state.sync.access && state.sync.phrase) sbPull(true).catch(function(){});
+  if (session && hiddenAt && Date.now() - hiddenAt > 30 * 1000 && state.sync && state.sync.access && state.sync.phrase) sbPull(true).then(fetchComments).catch(function(){});
 });
 $("resetApp").addEventListener("click", function(){
   armed($("resetApp"), "Effacer tous les comptes de ce téléphone", "Touche encore : tout sera effacé", function(){

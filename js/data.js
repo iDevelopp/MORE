@@ -47,8 +47,9 @@ function normalize(d){
       var g = cleanGoals(r.goals); if (Object.keys(g).length) o.goals = g;
       return o; }) : [],
     notes: cleanNotes(d.notes),
+    shares: cleanShares(d.shares),
     active: d.active && typeof d.active.rid === "string" && safeDate(d.active.date) ? { rid: safeId(d.active.rid), date: d.active.date, done: cleanDone(d.active.done) } : null,
-    settings: { rest: [0,60,90,120].indexOf(+st.rest) >= 0 ? +st.rest : 90, warmup: st.warmup !== false },
+    settings: { rest: [0,60,90,120].indexOf(+st.rest) >= 0 ? +st.rest : 90, warmup: st.warmup !== false, seen: safeNum(st.seen, 1e13) },
     sync: d.sync && typeof d.sync.url === "string" && /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(d.sync.url) ? {
       url: d.sync.url, key: safeStr(d.sync.key, 400), email: safeStr(d.sync.email, 120), access: d.sync.access ? String(d.sync.access) : null,
       refresh: d.sync.refresh ? String(d.sync.refresh) : null, uid: /^[0-9a-f-]{36}$/i.test(d.sync.uid || "") ? d.sync.uid : null, last: safeNum(d.sync.last, 1e13),
@@ -111,6 +112,13 @@ function addTemplate(key){
   if (t.warm === false) r.warm = false;
   state.routines.push(r); return r;
 }
+/* Liens de suivi : identifiant public (22 caractères) et clé de chiffrement propre au lien (43 caractères) */
+function cleanShares(s){
+  if (!Array.isArray(s)) return [];
+  return s.slice(0, 10).filter(function(x){ return x && /^[A-Za-z0-9_-]{22}$/.test(x.id || "") && /^[A-Za-z0-9_-]{43}$/.test(x.key || ""); }).map(function(x){
+    return { id: x.id, key: x.key, label: safeStr(x.label, 30) || "Suivi", notes: x.notes === true, weight: x.weight === true, created: safeNum(x.created, 1e13) };
+  });
+}
 function cleanNotes(n){
   var out = {}; if (!n || typeof n !== "object") return out;
   Object.keys(n).forEach(function(k){ if (safeDate(k) && typeof n[k] === "string") out[k] = n[k].slice(0, 1000); });
@@ -121,4 +129,4 @@ function cleanDone(dn){
   Object.keys(dn).slice(0, 60).forEach(function(k){ var n = safeStr(k); if (n && typeof dn[k] === "string" && RE_ID.test(dn[k])) out[n] = dn[k]; });
   return out;
 }
-function exportData(){ return { entries: state.entries, profile: state.profile, meta: state.meta, routines: state.routines, notes: state.notes, settings: state.settings, updatedAt: state.updatedAt }; }
+function exportData(){ return { entries: state.entries, profile: state.profile, meta: state.meta, routines: state.routines, notes: state.notes, shares: state.shares, settings: state.settings, updatedAt: state.updatedAt }; }

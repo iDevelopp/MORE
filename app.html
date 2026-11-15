@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="icon" type="image/png" href="assets/favicon-32.png">
 <script src="js/theme-boot.js?v=ba1374a3c2"></script>
-<link rel="stylesheet" href="css/style.css?v=61b569b8c2">
+<link rel="stylesheet" href="css/style.css?v=222bf402da">
 </head>
 <body>
 <div class="splash" id="splash" aria-hidden="true"><div class="splash-tile"><svg class="mark draw-in" viewBox="0 0 256 256" aria-hidden="true"><path class="mk-m" d="M46 204 L84 112 L124 170 L174 60 L212 204" pathLength="1"/><path class="mk-g" d="M124 170 L174 60" pathLength="1"/></svg></div><div class="splash-word">MORE<small>Uplift yourself.</small></div></div>
@@ -287,6 +287,7 @@
         <button type="button" class="set-row" data-go="rest"><span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg></span><span class="set-lbl">Temps de repos</span><span class="set-val" id="pvRest"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
       </div>
       <div class="glass set-list">
+        <button type="button" class="set-row" data-go="share"><span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.4.1 4 1.6 4.5 4.3"/></svg></span><span class="set-lbl">Partage du suivi</span><span class="set-val" id="pvShare"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-row" data-go="sync"><span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 9.6 4.2 4.2 0 0 0 7 18z"/></svg></span><span class="set-lbl">Synchronisation</span><span class="set-val" id="pvSync"></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
         <button type="button" class="set-row" data-go="backup"><span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="5" rx="1.5"/><path d="M5 9v9.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V9M10 13h4"/></svg></span><span class="set-lbl">Sauvegarde</span><span class="set-val">Copier, importer</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
       </div>
@@ -395,6 +396,84 @@ create policy "supprimer ses données" on public.carnets for delete to authentic
     </div>
 
     <!-- Sauvegarde -->
+    <div class="set-page" data-sp="share" hidden>
+      <p class="set-note">Crée un lien pour un ami ou ton coach : il voit tes courbes, tes dernières séances et tes records, en lecture seule et à jour en temps réel, et peut commenter une séance. Chaque lien a sa propre clé : ta phrase secrète n'est jamais partagée.</p>
+      <div class="glass card" id="shareNeed" hidden><p class="hint" style="margin:0">Connecte d'abord la synchronisation (Réglages → Synchronisation) pour pouvoir partager ton suivi.</p></div>
+      <div class="stack" id="shareList"></div>
+      <div class="glass card" id="shareNew">
+        <h2 style="margin-bottom:12px">Nouveau lien</h2>
+        <div class="field"><label for="shLabel">Pour qui ?</label><input class="input" id="shLabel" maxlength="30" placeholder="ex. Coach, Thomas" autocomplete="off"></div>
+        <label class="check-row"><input type="checkbox" id="shNotes"> Inclure mes notes de séance</label>
+        <label class="check-row"><input type="checkbox" id="shWeight"> Inclure mon poids corporel</label>
+        <p class="err" id="shareMsg"></p>
+        <button class="btn" id="shCreate" type="button">Créer le lien</button>
+      </div>
+      <p class="hint" style="margin:0 4px">Toute personne qui a le lien peut lire ton suivi et commenter : envoie-le en message privé, et coupe-le si tu as un doute.</p>
+      <details class="glass card"><summary>Activer le partage dans Supabase (une seule fois)</summary>
+        <p class="hint">Supabase → SQL Editor → New query : colle ce code puis « Run ».</p>
+        <textarea class="input mono" id="shareSql" readonly style="margin-top:8px">-- MORE · partage du suivi (à exécuter une fois dans Supabase → SQL Editor)
+-- Les instantanés et les commentaires sont chiffrés dans le navigateur : le serveur ne stocke que des blocs illisibles.
+
+create table if not exists public.partages (
+  id text primary key check (id ~ '^[A-Za-z0-9_-]{22}$'),
+  owner uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  data jsonb not null check (pg_column_size(data) &lt; 1500000),
+  updated_at timestamptz not null default now()
+);
+alter table public.partages enable row level security;
+revoke all on public.partages from anon, authenticated;
+grant select, insert, update, delete on public.partages to authenticated;
+drop policy if exists "partages : le propriétaire" on public.partages;
+create policy "partages : le propriétaire" on public.partages for all to authenticated
+  using ((select auth.uid()) = owner) with check ((select auth.uid()) = owner);
+
+create table if not exists public.commentaires (
+  id bigint generated always as identity primary key,
+  partage_id text not null references public.partages (id) on delete cascade,
+  data jsonb not null check (pg_column_size(data) &lt; 8000),
+  created_at timestamptz not null default now()
+);
+create index if not exists commentaires_partage on public.commentaires (partage_id, created_at);
+alter table public.commentaires enable row level security;
+revoke all on public.commentaires from anon, authenticated;
+grant select, delete on public.commentaires to authenticated;
+drop policy if exists "commentaires : lecture du propriétaire" on public.commentaires;
+create policy "commentaires : lecture du propriétaire" on public.commentaires for select to authenticated
+  using (exists (select 1 from public.partages p where p.id = partage_id and p.owner = (select auth.uid())));
+drop policy if exists "commentaires : suppression du propriétaire" on public.commentaires;
+create policy "commentaires : suppression du propriétaire" on public.commentaires for delete to authenticated
+  using (exists (select 1 from public.partages p where p.id = partage_id and p.owner = (select auth.uid())));
+
+-- Lecture d'un lien de suivi (sans compte) : uniquement si on connaît son identifiant
+create or replace function public.lire_partage(p_id text)
+returns table (data jsonb, updated_at timestamptz, commentaires jsonb)
+language sql stable security definer set search_path = '' as $$
+  select p.data, p.updated_at,
+    coalesce((select jsonb_agg(jsonb_build_object('data', c.data, 'at', c.created_at) order by c.created_at)
+              from public.commentaires c where c.partage_id = p.id), '[]'::jsonb)
+  from public.partages p where p.id = p_id;
+$$;
+
+-- Commentaire laissé depuis un lien de suivi (30 par heure maximum par lien)
+create or replace function public.commenter_partage(p_id text, p_data jsonb)
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if pg_column_size(p_data) &gt; 8000 then raise exception 'Commentaire trop long'; end if;
+  if not exists (select 1 from public.partages where id = p_id) then raise exception 'Lien inconnu'; end if;
+  if (select count(*) from public.commentaires where partage_id = p_id and created_at &gt; now() - interval '1 hour') &gt;= 30
+    then raise exception 'Trop de commentaires, réessaie plus tard'; end if;
+  insert into public.commentaires (partage_id, data) values (p_id, p_data);
+end $$;
+
+revoke all on function public.lire_partage(text) from public;
+revoke all on function public.commenter_partage(text, jsonb) from public;
+grant execute on function public.lire_partage(text) to anon, authenticated;
+grant execute on function public.commenter_partage(text, jsonb) to anon, authenticated;
+</textarea>
+        <button class="btn ghost sm" id="shareSqlCopy" type="button" style="margin-top:10px">Copier le code</button>
+      </details>
+    </div>
+
     <div class="set-page" data-sp="backup" hidden>
       <p class="set-note">Copie tes données pour les garder ailleurs, ou importe une sauvegarde : elle s'ajoute à tes séances, sans rien effacer (les doublons sont ignorés).</p>
       <div class="glass card">
@@ -465,16 +544,16 @@ create policy "supprimer ses données" on public.carnets for delete to authentic
 <div class="toast glass" id="toast" hidden role="status"></div>
 <script src="js/config.js?v=1928f081cf"></script>
 <script src="js/core.js?v=ec296db756"></script>
-<script src="js/data.js?v=261a7bd77e"></script>
+<script src="js/data.js?v=0151a87f59"></script>
 <script src="js/crypto.js?v=fa384900d3"></script>
 <script src="js/domain.js?v=434e9d2173"></script>
 <script src="js/charts.js?v=dcf175171f"></script>
-<script src="js/views.js?v=765a55e3ef"></script>
+<script src="js/views.js?v=a158180fcc"></script>
 <script src="js/form.js?v=477cc488fe"></script>
 <script src="js/exercise.js?v=576ed1fb5f"></script>
 <script src="js/workout.js?v=ee1e568e97"></script>
-<script src="js/sync.js?v=e072996341"></script>
-<script src="js/settings.js?v=d4278fba1f"></script>
-<script src="js/app.js?v=125ec7730e"></script>
+<script src="js/sync.js?v=4880c03834"></script>
+<script src="js/settings.js?v=b04bd9b45f"></script>
+<script src="js/app.js?v=69a6a71017"></script>
 </body>
 </html>
