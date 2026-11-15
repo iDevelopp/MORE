@@ -72,8 +72,12 @@ $("savePw").addEventListener("click", function(){
     sbReq("/auth/v1/token?grant_type=password", { method: "POST", anon: true, body: { email: s.email, password: cur } }, sbCfg()).then(function(j){
       s.access = j.access_token; s.refresh = j.refresh_token || s.refresh;
       return sbReq("/auth/v1/user", { method: "PUT", body: { password: pw } });
+    }).then(function(){
+      return sbReq("/auth/v1/token?grant_type=password", { method: "POST", anon: true, body: { email: s.email, password: pw } }, sbCfg())
+        .then(function(j){ s.access = j.access_token; s.refresh = j.refresh_token || s.refresh; },
+              function(){ throw new Error("Le serveur n'a pas pris en compte le nouveau mot de passe. Ton ancien mot de passe reste valable."); });
     }).then(function(){ return rekeyAccount(pw); }).then(function(){
-      $("curPw").value = ""; persist(); okMsg(); m.textContent = "Mot de passe modifié, en ligne et sur ce téléphone.";
+      $("curPw").value = ""; persist(); okMsg(); m.textContent = "Mot de passe modifié, en ligne et sur ce téléphone. Si ton iPhone le propose, mets aussi à jour le mot de passe enregistré dans le trousseau.";
     }, function(e){ m.className = "err"; m.textContent = /invalid login/i.test(e && e.message || "") ? "Mot de passe actuel incorrect." : syncErr(e); });
     return;
   }

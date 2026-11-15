@@ -270,7 +270,7 @@ function rekeyAccount(pw, name){
   return deriveKey(pw, salt).then(function(key){
     return saveQueue.then(function(){ return encrypt(key, JSON.parse(JSON.stringify(state))); }).then(function(enc){
       var a = accounts.find(function(x){ return x.id === sess.id; }); if (!a) return;
-      a.salt = b64(salt); a.iv = enc.iv; a.data = enc.data; delete a.mode; delete a.hash; delete a.plain;
+      a.salt = b64(salt); a.iv = enc.iv; a.data = enc.data; delete a.mode; delete a.hash; delete a.plain; a.krev = Date.now(); sess.salt = a.salt;
       if (name){ a.name = name; a.online = true; sess.name = name; }
       writeAccounts(accounts); sess.key = key;
     });

@@ -181,6 +181,7 @@ $("accList").addEventListener("click", function(e){
 });
 $("loginForm").addEventListener("submit", function(e){
   e.preventDefault();
+  accounts = readAccounts();
   var acc = accounts.find(function(a){ return a.id === selectedAcc; }), pw = $("loginPw").value, btn = $("loginBtn");
   if (!acc || btn.disabled) return;
   if (!pw){ $("loginErr").textContent = "Entre ton mot de passe."; return; }
@@ -188,7 +189,7 @@ $("loginForm").addEventListener("submit", function(e){
   if (waitMs > 0){ $("loginErr").textContent = "Trop d'essais. Réessaie dans " + Math.ceil(waitMs / 1000) + " s."; return; }
   btn.disabled = true; btn.textContent = "Vérification…"; $("loginErr").textContent = "";
   function ok(data, key){
-    acc.fails = 0; acc.lockUntil = 0; writeAccounts(accounts); session = { id: acc.id, name: acc.name, key: key }; btn.disabled = false; btn.textContent = "Déverrouiller";
+    acc.fails = 0; acc.lockUntil = 0; writeAccounts(accounts); session = { id: acc.id, name: acc.name, key: key, salt: acc.salt }; btn.disabled = false; btn.textContent = "Déverrouiller";
     var online = ONLINE && acc.online; enterApp(data, online); if (online) verifyOnline(acc, pw);
   }
   function stop(msg){ btn.disabled = false; btn.textContent = "Déverrouiller"; $("loginErr").textContent = msg; }
@@ -197,7 +198,7 @@ $("loginForm").addEventListener("submit", function(e){
     /* au-delà de 5 échecs : 30 s, puis 60 s, 120 s… jusqu'à 15 min, mémorisé même si on recharge la page */
     var wait = acc.fails >= 5 ? Math.min(30000 * Math.pow(2, acc.fails - 5), 900000) : 0;
     acc.lockUntil = wait ? Date.now() + wait : 0; writeAccounts(accounts);
-    $("loginErr").textContent = "Mot de passe incorrect." + (wait ? " Réessaie dans " + Math.round(wait/1000) + " s." : acc.fails >= 3 ? " Encore " + (5 - acc.fails) + " essai(s) avant un blocage temporaire." : "");
+    $("loginErr").textContent = "Mot de passe incorrect." + (acc.online && acc.fails === 1 ? " Si tu l'as changé récemment, tape-le à la main : le trousseau peut proposer l'ancien." : "") + (wait ? " Réessaie dans " + Math.round(wait/1000) + " s." : acc.fails >= 3 ? " Encore " + (5 - acc.fails) + " essai(s) avant un blocage temporaire." : "");
     setTimeout(function(){ btn.disabled = false; btn.textContent = "Déverrouiller"; }, Math.min(wait, 1500));
   }
   if (acc.mode === "hash"){ setTimeout(function(){ if (slowHash(pw, acc.salt) === acc.hash) ok(acc.plain, null); else wrong(); }, 30); return; }
@@ -236,7 +237,7 @@ $("createForm").addEventListener("submit", function(e){
   btn.disabled = true; btn.textContent = "Création…";
   var data = $("cSeed").checked ? normalize({ entries: seed(), routines: seedRoutines() }) : normalize(null);
   createAccount(name, pw, data).then(function(r){
-    session = { id: r.acc.id, name: r.acc.name, key: r.key }; selectedAcc = r.acc.id;
+    session = { id: r.acc.id, name: r.acc.name, key: r.key, salt: r.acc.salt }; selectedAcc = r.acc.id;
     btn.disabled = false; btn.textContent = "Créer le compte";
     enterApp(data); toast("Compte créé. Bienvenue " + displayName(name) + " !");
   }).catch(function(){ btn.disabled = false; btn.textContent = "Créer le compte"; $("createErr").textContent = "Impossible de créer le compte sur cet appareil."; });
@@ -277,11 +278,18 @@ $("restoreForm").addEventListener("submit", function(e){
     if (existing){ accounts = accounts.filter(function(a){ return a.id !== existing.id; }); writeAccounts(accounts); }
     return createAccount(email, pw, JSON.parse(JSON.stringify(d))).then(function(r){
       r.acc.online = true; writeAccounts(accounts);
-      session = { id: r.acc.id, name: r.acc.name, key: r.key }; selectedAcc = r.acc.id;
+      session = { id: r.acc.id, name: r.acc.name, key: r.key, salt: r.acc.salt }; selectedAcc = r.acc.id;
       btn.disabled = false; btn.textContent = label; $("rPw").value = ""; $("rPw2").value = ""; $("rPhrase").value = ""; err.textContent = "";
       enterApp(d); toast(d.entries.length ? "Bon retour " + displayName(email) + " : tes séances sont là" : "Connecté. Aucune séance en ligne pour l'instant.");
     });
   }).catch(function(e2){ btn.disabled = false; btn.textContent = label; err.className = (e2 && e2.message === "CONFIRM") ? "err ok" : "err"; err.textContent = syncErr(e2); });
+});
+window.addEventListener("storage", function(e){
+  if (e.key !== ACC_KEY) return;
+  accounts = readAccounts();
+  var a = session && accounts.find(function(x){ return x.id === session.id; });
+  if (session && session.salt && (!a || a.salt !== session.salt)){ logout(); toast("Ton mot de passe a changé dans une autre fenêtre : reconnecte-toi"); }
+  else if (!session) showLock();
 });
 var hiddenAt = 0;
 document.addEventListener("visibilitychange", function(){

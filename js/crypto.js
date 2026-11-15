@@ -39,7 +39,17 @@ function readAccounts(){
     return Array.isArray(a) ? a.filter(function(x){ return x && RE_ID.test(x.id || "") && typeof x.name === "string" && typeof x.salt === "string"; }).slice(0, MAX_ACC) : [];
   } catch(e){ return []; }
 }
-function writeAccounts(a){ try { localStorage.setItem(ACC_KEY, JSON.stringify(a)); return true; } catch(e){ return false; } }
+function writeAccounts(a){
+  try {
+    /* une autre fenêtre de MORE (onglet, icône d'écran d'accueil) a pu changer un compte entre-temps : on garde le plus récent */
+    var stored = readAccounts();
+    a.forEach(function(x, i){
+      var s = stored.find(function(y){ return y.id === x.id; });
+      if (s && s.salt !== x.salt && (s.krev || 0) > (x.krev || 0)){ Object.keys(x).forEach(function(k){ delete x[k]; }); Object.keys(s).forEach(function(k){ x[k] = s[k]; }); }
+    });
+    localStorage.setItem(ACC_KEY, JSON.stringify(a)); return true;
+  } catch(e){ return false; }
+}
 var accounts = readAccounts();
 var hasCrypto = !!(window.crypto && crypto.subtle && crypto.getRandomValues && window.TextEncoder);
 function b64(buf){ var out = "", b = new Uint8Array(buf); for (var i = 0; i < b.length; i++) out += String.fromCharCode(b[i]); return btoa(out); }
@@ -86,6 +96,8 @@ function persist(){
   }
   saveQueue = saveQueue.then(function(){ return encrypt(sess.key, snap); }).then(function(enc){
     var a = accounts.find(function(x){ return x.id === sess.id; }); if (!a) return;
+    var st = readAccounts().find(function(x){ return x.id === sess.id; });
+    if (st && sess.salt && st.salt !== sess.salt){ if (session === sess){ toast("Ton mot de passe a changé dans une autre fenêtre : reconnecte-toi"); logout(); } return; }
     a.iv = enc.iv; a.data = enc.data;
     if (!writeAccounts(accounts)) toast("Impossible d'enregistrer sur cet appareil");
   }).catch(function(){ toast("Erreur d'enregistrement"); });
