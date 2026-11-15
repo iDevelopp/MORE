@@ -15,19 +15,19 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="icon" type="image/png" href="assets/favicon-32.png">
-<script src="js/landing.js?v=9918025c7b"></script>
-<link rel="stylesheet" href="css/landing.css?v=afe1876619">
+<script src="js/landing.js?v=8affff5971"></script>
+<link rel="stylesheet" href="css/landing.css?v=c1654712ce">
 </head>
 <body>
 <div class="halo" aria-hidden="true"></div>
 
-<header class="bar">
+<header class="bar"><nav class="pill" aria-label="Navigation">
   <a class="brand" href="./" aria-label="MORE, accueil">
     <svg class="mark" viewBox="0 0 256 256" aria-hidden="true"><path d="M46 204 L84 112 L124 170 L174 60 L212 204"/><path class="g" d="M124 170 L174 60"/></svg>
     <span>MORE</span>
   </a>
   <a class="btn btn-sm" href="app.html">Se connecter</a>
-</header>
+</nav></header>
 
 <main>
   <section class="hero">
@@ -36,11 +36,11 @@
     <p class="lead">Le carnet de muscu qui retient tes charges, te montre ce qui progresse et te dit quoi soulever la prochaine fois.</p>
     <div class="cta">
       <a class="btn" href="app.html">Ouvrir MORE</a>
-      <a class="btn btn-ghost" href="#video">Voir la vidéo</a>
+      <a class="btn btn-ghost" href="#video">Découvrir</a>
     </div>
   </section>
 
-  <section class="video" id="video" aria-label="Vidéo de présentation">
+  <section class="video" id="video" data-reveal aria-label="Vidéo de présentation">
     <div class="frame wide">
       <video controls playsinline preload="none" poster="assets/video/poster-16x9.jpg" aria-label="Présentation de MORE, format paysage">
         <source src="assets/video/more-16x9.mp4" type="video/mp4">
@@ -54,32 +54,32 @@
   </section>
 
   <section class="features" aria-label="Fonctionnalités">
-    <article class="feat">
-      <img src="assets/video/ecran-saisie.jpg" alt="Écran de saisie d'une série : Leg press, 135 kg, 3 séries de 12" width="540" height="1035" loading="lazy">
+    <article class="feat" data-reveal>
+      <div class="shot"><img src="assets/video/ecran-saisie.webp" alt="Écran de saisie d'une série : Leg press, 135 kg, 3 séries de 12" width="600" height="1170" loading="lazy"></div>
       <div>
         <p class="kicker">Saisie</p>
         <h2>Note ta séance en quelques secondes.</h2>
         <p>Machine, haltères, tapis de sol ou de course. MORE se souvient de la dernière fois et pré-remplit tout.</p>
       </div>
     </article>
-    <article class="feat">
-      <img src="assets/video/ecran-progression.jpg" alt="Écran de progression : exercices en progrès et stables, avec leurs courbes" width="540" height="1035" loading="lazy">
+    <article class="feat" data-reveal>
+      <div class="shot"><img src="assets/video/ecran-progression.webp" alt="Écran de progression : exercices en progrès et stables, avec leurs courbes" width="600" height="1170" loading="lazy"></div>
       <div>
         <p class="kicker">Progression</p>
         <h2>Vois ce qui monte, ce qui stagne.</h2>
         <p>Chaque exercice a sa courbe. Les records sont repérés tout seuls, les exercices oubliés aussi.</p>
       </div>
     </article>
-    <article class="feat">
-      <img src="assets/video/ecran-suggestion.jpg" alt="Fiche Leg press : courbe de 100 à 135 kg et suggestion de 140 kg" width="540" height="1035" loading="lazy">
+    <article class="feat" data-reveal>
+      <div class="shot"><img src="assets/video/ecran-suggestion.webp" alt="Fiche Leg press : courbe de 100 à 135 kg et suggestion de 140 kg" width="600" height="1170" loading="lazy"></div>
       <div>
         <p class="kicker">Surcharge progressive</p>
         <h2>Sache quoi soulever la prochaine fois.</h2>
         <p>Tu as tenu toutes tes séries ? MORE te propose la charge suivante. Sinon, il te dit de consolider.</p>
       </div>
     </article>
-    <article class="feat">
-      <img src="assets/video/ecran-seance.jpg" alt="Séance guidée : exercices cochés et minuteur de repos" width="540" height="1035" loading="lazy">
+    <article class="feat" data-reveal>
+      <div class="shot"><img src="assets/video/ecran-seance.webp" alt="Séance guidée : exercices cochés et minuteur de repos" width="600" height="1170" loading="lazy"></div>
       <div>
         <p class="kicker">Séance guidée</p>
         <h2>Tes programmes, prêts à dérouler.</h2>
@@ -88,7 +88,7 @@
     </article>
   </section>
 
-  <section class="privacy">
+  <section class="privacy" data-reveal>
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
     <div>
       <h2>Tes données restent à toi.</h2>
@@ -96,7 +96,7 @@
     </div>
   </section>
 
-  <section class="end">
+  <section class="end" data-reveal>
     <svg class="mark big" viewBox="0 0 256 256" aria-hidden="true"><path d="M46 204 L84 112 L124 170 L174 60 L212 204"/><path class="g" d="M124 170 L174 60"/></svg>
     <p class="word">MORE</p>
     <p class="tag accent">Uplift yourself.</p>
