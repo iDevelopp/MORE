@@ -126,6 +126,7 @@ function paintAvSeg(){
   }).join("");
 }
 function showLock(){
+  $("resetForm").hidden = true;
   $("lockBar").hidden = !!CONFIG.demo;
   $("lock").hidden = false; $("createForm").hidden = true; $("restoreForm").hidden = true; $("lockLogin").hidden = false;
   $("restoreAccBtn").hidden = accounts.length >= MAX_ACC;
@@ -146,7 +147,44 @@ function showLock(){
     if (!accounts.length) openRestore(false);
   }
 }
-var restoreSignup = false;
+var restoreSignup = false, resetToken = null;
+/* Mot de passe oublié : Supabase envoie un e-mail ; son lien revient sur MORE avec un jeton après le # */
+function sendRecovery(email, out){
+  out.className = "err";
+  if (!ONLINE){ out.textContent = "Disponible une fois MORE relié à Supabase."; return; }
+  if (!isEmail(email)){ out.textContent = "Entre d'abord ton e-mail ci-dessus, puis touche « Mot de passe oublié ? »."; return; }
+  out.className = "err muted"; out.textContent = "Envoi de l'e-mail…";
+  var back = location.href.split("#")[0].split("?")[0];
+  sbReq("/auth/v1/recover?redirect_to=" + encodeURIComponent(back), { method: "POST", anon: true, body: { email: email } }, sbCfg()).then(function(){
+    out.className = "err ok"; out.textContent = "E-mail envoyé à " + email + ". Ouvre le lien du dernier e-mail reçu, une seule fois et dans l'heure.";
+  }, function(e){
+    out.className = "err"; out.textContent = /rate|seconds|too many/i.test(e && e.message || "") ? "Trop de demandes : attends une minute avant de redemander un e-mail." : syncErr(e);
+  });
+}
+function jwtEmail(t){
+  try { var p = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"); while (p.length % 4) p += "="; return String(JSON.parse(atob(p)).email || "").toLowerCase(); } catch(e){ return ""; }
+}
+/* Retour depuis un e-mail Supabase (récupération, lien magique) ou lien périmé */
+function handleAuthHash(){
+  var h = location.hash || ""; if (!/access_token=|error_code=|error=/.test(h)) return;
+  var q = {}; h.slice(1).split("&").forEach(function(kv){ var i = kv.indexOf("="); if (i > 0) q[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1).replace(/\+/g, " ")); });
+  try { history.replaceState(null, "", location.pathname + location.search); } catch(e){}
+  if (!ONLINE) return;
+  if (q.access_token && /^[A-Za-z0-9._-]{20,4000}$/.test(q.access_token)){
+    resetToken = q.access_token;
+    $("lock").hidden = false; $("lockLogin").hidden = true; $("createForm").hidden = true; $("restoreForm").hidden = true; $("resetForm").hidden = false; $("demoHint").hidden = true;
+    var em = jwtEmail(resetToken);
+    $("lockSub").textContent = "Nouveau mot de passe";
+    $("rsIntro").textContent = em ? "Compte " + em + " : choisis ton nouveau mot de passe." : "Choisis ton nouveau mot de passe.";
+    $("resetErr").textContent = ""; $("rsPw").focus();
+    return;
+  }
+  openRestore(false);
+  $("restoreErr").className = "err";
+  $("restoreErr").textContent = q.error_code === "otp_expired"
+    ? "Ce lien a expiré ou a déjà servi (chaque nouvelle demande annule la précédente). Entre ton e-mail et touche « Mot de passe oublié ? » pour en recevoir un nouveau."
+    : "Le lien reçu par e-mail n'a pas fonctionné (" + safeStr(q.error_description || q.error, 120) + ").";
+}
 function openRestore(signup){
   restoreSignup = !!signup;
   $("lock").hidden = false; $("lockLogin").hidden = true; $("createForm").hidden = true; $("restoreForm").hidden = false; $("demoHint").hidden = true;
@@ -291,6 +329,32 @@ window.addEventListener("storage", function(e){
   if (session && session.salt && (!a || a.salt !== session.salt)){ logout(); toast("Ton mot de passe a changé dans une autre fenêtre : reconnecte-toi"); }
   else if (!session) showLock();
 });
+document.querySelectorAll("[data-forgot]").forEach(function(b){
+  b.addEventListener("click", function(){
+    var inRestore = !$("restoreForm").hidden, acc = accounts.find(function(a){ return a.id === selectedAcc; });
+    var email = inRestore ? $("rEmail").value.trim().toLowerCase() : (acc && isEmail(acc.name) ? acc.name : "");
+    sendRecovery(email, inRestore ? $("restoreErr") : $("loginErr"));
+  });
+});
+$("cancelReset").addEventListener("click", function(){ resetToken = null; $("resetForm").hidden = true; showLock(); });
+$("resetForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  var pw = $("rsPw").value, err = $("resetErr"), btn = $("rsBtn"); err.className = "err";
+  if (btn.disabled || !resetToken) return;
+  if (pw.length < 8){ err.textContent = "Au moins 8 caractères."; return; }
+  if (pw !== $("rsPw2").value){ err.textContent = "Les deux mots de passe ne sont pas identiques."; return; }
+  btn.disabled = true; err.className = "err muted"; err.textContent = "Enregistrement…";
+  var cfg = sbCfg(), email = jwtEmail(resetToken);
+  sbReq("/auth/v1/user", { method: "PUT", body: { password: pw } }, { url: cfg.url, key: cfg.key, access: resetToken }).then(function(){
+    btn.disabled = false; resetToken = null; $("rsPw").value = ""; $("rsPw2").value = ""; $("resetForm").hidden = true;
+    openRestore(false); if (email) $("rEmail").value = email;
+    $("restoreErr").className = "err ok"; $("restoreErr").textContent = "Mot de passe changé. Connecte-toi avec le nouveau et ta phrase secrète : tes séances vont revenir.";
+    $(email ? "rPw" : "rEmail").focus();
+  }, function(e2){
+    btn.disabled = false; err.className = "err";
+    err.textContent = /expired|invalid|jwt/i.test(e2 && e2.message || "") ? "Ce lien a expiré : redemande un e-mail avec « Mot de passe oublié ? »." : syncErr(e2);
+  });
+});
 var hiddenAt = 0;
 document.addEventListener("visibilitychange", function(){
   if (document.hidden){ hiddenAt = Date.now(); if (session) flushPush(); return; }
@@ -316,5 +380,5 @@ document.querySelectorAll("form").forEach(function(f){
 $("fDate").value = todayISO();
 renderAll();
 showLock();
-ensureDemo().then(showLock, function(e){ showLock(); $("lockSub").textContent = "Le compte démo n'a pas pu être créé (" + (e && (e.name || e.message) || e) + ")."; });
+ensureDemo().then(function(){ showLock(); handleAuthHash(); }, function(e){ showLock(); $("lockSub").textContent = "Le compte démo n'a pas pu être créé (" + (e && (e.name || e.message) || e) + ")."; });
 setTimeout(function(){ $("splash").classList.add("out"); }, 650);

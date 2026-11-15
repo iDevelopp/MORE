@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="icon" type="image/png" href="assets/favicon-32.png">
 <script src="js/theme-boot.js?v=ba1374a3c2"></script>
-<link rel="stylesheet" href="css/style.css?v=222bf402da">
+<link rel="stylesheet" href="css/style.css?v=023a04c589">
 </head>
 <body>
 <div class="splash" id="splash" aria-hidden="true"><div class="splash-tile"><svg class="mark draw-in" viewBox="0 0 256 256" aria-hidden="true"><path class="mk-m" d="M46 204 L84 112 L124 170 L174 60 L212 204" pathLength="1"/><path class="mk-g" d="M124 170 L174 60" pathLength="1"/></svg></div><div class="splash-word">MORE<small>Uplift yourself.</small></div></div>
@@ -509,6 +509,7 @@ grant execute on function public.commenter_partage(text, jsonb) to anon, authent
         <div class="field"><label for="loginPw">Mot de passe</label><input class="input" id="loginPw" type="password" autocomplete="current-password"></div>
         <p class="err" id="loginErr" role="alert"></p>
         <button class="btn" type="submit" id="loginBtn">Déverrouiller</button>
+        <button type="button" class="linkbtn forgot" data-forgot>Mot de passe oublié ?</button>
       </form>
       <button type="button" class="btn ghost" id="newAccBtn" style="margin-top:12px">Créer un compte</button>
       <button type="button" class="btn ghost" id="restoreAccBtn" style="margin-top:10px">J'ai déjà un compte en ligne</button>
@@ -524,7 +525,17 @@ grant execute on function public.commenter_partage(text, jsonb) to anon, authent
       <p class="hint" id="rHint" style="margin:10px 0 0">Ce mot de passe servira aussi à déverrouiller MORE sur ce téléphone.</p>
       <p class="err" id="restoreErr" role="alert"></p>
       <button class="btn" type="submit" id="restoreBtn">Se connecter</button>
+      <button type="button" class="linkbtn forgot" data-forgot>Mot de passe oublié ?</button>
       <button type="button" class="btn ghost" id="cancelRestore" style="margin-top:10px">Annuler</button>
+    </form>
+    <form id="resetForm" novalidate hidden>
+      <p class="set-note" id="rsIntro" style="margin:0 0 16px;text-align:center">Choisis ton nouveau mot de passe.</p>
+      <div class="field"><label for="rsPw">Nouveau mot de passe (8 caractères minimum)</label><input class="input" id="rsPw" type="password" autocomplete="new-password"></div>
+      <div class="field"><label for="rsPw2">Confirme-le</label><input class="input" id="rsPw2" type="password" autocomplete="new-password"></div>
+      <p class="hint" style="margin:10px 0 0">Tes séances ne changent pas : elles restent protégées par ta phrase secrète.</p>
+      <p class="err" id="resetErr" role="alert"></p>
+      <button class="btn" type="submit" id="rsBtn">Enregistrer le mot de passe</button>
+      <button type="button" class="btn ghost" id="cancelReset" style="margin-top:10px">Annuler</button>
     </form>
     <form id="createForm" novalidate hidden>
       <div class="field"><label for="cName">E-mail ou pseudo</label><input class="input" id="cName" maxlength="60" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="ex. thomas@icloud.com"></div>
@@ -554,6 +565,6 @@ grant execute on function public.commenter_partage(text, jsonb) to anon, authent
 <script src="js/workout.js?v=ee1e568e97"></script>
 <script src="js/sync.js?v=78a9cf6e4b"></script>
 <script src="js/settings.js?v=e9a04a5a45"></script>
-<script src="js/app.js?v=954f25c8a8"></script>
+<script src="js/app.js?v=e7d57b5085"></script>
 </body>
 </html>

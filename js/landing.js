@@ -3,6 +3,8 @@
    - Apparitions au défilement, vidéo qui grandit en entrant à l'écran, léger parallaxe des téléphones. */
 (function(){
   "use strict";
+  /* lien reçu par e-mail (mot de passe oublié, lien périmé) : on le confie à l'app */
+  if (/access_token=|error_code=|error=/.test(location.hash || "")){ window.location.replace("app.html" + location.hash); return; }
   var standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
   if (standalone){ window.location.replace("app.html"); return; }
 
