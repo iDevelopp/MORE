@@ -5,6 +5,33 @@
    Synchronisation Supabase
    ========================================================= */
 var pushTimer = null, pushWarned = false;
+/* --- Chiffrement de bout en bout : le carnet est chiffré sur le téléphone avant l'envoi.
+       Clé = PBKDF2-SHA-256 (250 000 itérations) de la phrase secrète + sel ; chiffrement AES-GCM 256 bits.
+       Le serveur ne reçoit que { v, salt, iv, ct } : illisible sans la phrase. --- */
+var e2eCache = { salt: null, phrase: null, key: null };
+function e2eKey(phrase, saltB64){
+  if (e2eCache.key && e2eCache.salt === saltB64 && e2eCache.phrase === phrase) return Promise.resolve(e2eCache.key);
+  return deriveKey("more-e2e:" + phrase, unb64(saltB64)).then(function(k){ e2eCache = { salt: saltB64, phrase: phrase, key: k }; return k; });
+}
+function e2eSeal(obj){
+  var s = state.sync;
+  if (!s || !s.phrase) return Promise.reject(new Error("NOPHRASE"));
+  if (!s.salt) s.salt = randSalt();
+  return e2eKey(s.phrase, s.salt).then(function(k){ return encrypt(k, obj); })
+    .then(function(enc){ return { v: 1, alg: "AES-GCM-256", kdf: "PBKDF2-SHA256-250000", salt: s.salt, iv: enc.iv, ct: enc.data }; });
+}
+function e2eOpen(blob, phrase){
+  if (!blob || typeof blob !== "object") return Promise.reject(new Error("Données du serveur illisibles."));
+  if (!blob.ct) return Promise.resolve({ data: blob, legacy: true });   /* ancienne sauvegarde en clair : rechiffrée au prochain envoi */
+  if (typeof blob.salt !== "string" || typeof blob.iv !== "string" || typeof blob.ct !== "string") return Promise.reject(new Error("Données du serveur illisibles."));
+  return e2eKey(phrase, blob.salt)
+    .then(function(k){ return decrypt(k, { iv: blob.iv, data: blob.ct }); })
+    .then(function(d){ return { data: d, salt: blob.salt }; }, function(){ throw new Error("PHRASE"); });
+}
+function sbFetchRow(sync){
+  return sbReq("/rest/v1/carnets?select=data,updated_at&user_id=eq." + encodeURIComponent(sync.uid), {}, sync)
+    .then(function(rows){ return rows && rows.length ? rows[0] : null; });
+}
 function sbBase(u){ return String(u || "").trim().replace(/\/+$/, ""); }
 function sbReq(path, opts, sync){
   sync = sync || state.sync; opts = opts || {};
@@ -33,6 +60,8 @@ function syncErr(e){
   if (/invalid login/i.test(m)) return "E-mail ou mot de passe en ligne incorrect.";
   if (/email not confirmed/i.test(m)) return "Confirme d'abord ton e-mail (lien reçu de Supabase), puis reconnecte-toi.";
   if (/relation .* does not exist|carnets/i.test(m)) return "La table « carnets » n'existe pas : lance le code SQL ci-dessous dans Supabase.";
+  if (m === "PHRASE") return "Phrase secrète incorrecte (ou sauvegarde modifiée sur le serveur) : impossible de déchiffrer.";
+  if (m === "NOPHRASE") return "Ajoute ta phrase secrète : déconnecte puis reconnecte la synchronisation.";
   return m;
 }
 function sbAuth(signup){
@@ -41,21 +70,37 @@ function sbAuth(signup){
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.url)){ msg.textContent = "Colle l'adresse du projet, de la forme https://xxxx.supabase.co"; return; }
   if (cfg.key.length < 20){ msg.textContent = "Colle la clé « anon public » du projet."; return; }
   if (!isEmail(email) || pw.length < 8){ msg.textContent = "E-mail valide et mot de passe en ligne de 8 caractères minimum."; return; }
+  var phrase = $("sbPhrase").value;
+  if (!hasCrypto){ msg.textContent = "Ce navigateur ne permet pas le chiffrement : ouvre MORE dans Safari via son adresse https."; return; }
+  if (phrase.length < 12){ msg.textContent = "Choisis une phrase secrète d'au moins 12 caractères (ex. 4 mots séparés par des tirets)."; return; }
   msg.className = "err muted"; msg.textContent = signup ? "Création du compte…" : "Connexion…";
   var path = signup ? "/auth/v1/signup" : "/auth/v1/token?grant_type=password";
   sbReq(path, { method: "POST", anon: true, body: { email: email, password: pw } }, cfg).then(function(j){
     if (!j || !j.access_token){ msg.className = "err ok"; msg.textContent = "Compte créé. Confirme ton e-mail si Supabase te l'a demandé, puis touche « Se connecter »."; return; }
     if (!j.user || !/^[0-9a-f-]{36}$/i.test(j.user.id || "")) throw new Error("Réponse inattendue du serveur");
-    state.sync = { url: cfg.url, key: cfg.key, email: email, access: j.access_token, refresh: j.refresh_token, uid: j.user.id, last: 0 };
-    $("sbPw").value = ""; persist();
-    return sbPull(true).then(function(found){ if (!found) return sbPush(); }).then(function(){ msg.className = "err ok"; msg.textContent = "Connecté et synchronisé."; paintSync(); });
+    var tmp = { url: cfg.url, key: cfg.key, email: email, access: j.access_token, refresh: j.refresh_token, uid: j.user.id, last: 0, phrase: phrase, salt: null };
+    msg.textContent = "Vérification de la phrase secrète…";
+    /* on vérifie la phrase sur la sauvegarde existante AVANT d'enregistrer quoi que ce soit */
+    return sbFetchRow(tmp).then(function(row){
+      if (!row){ state.sync = tmp; return sbPush(); }
+      return e2eOpen(row.data, phrase).then(function(res){
+        tmp.salt = res.salt || null; state.sync = tmp;
+        var rt = Date.parse(row.updated_at) || 0;
+        if (rt > (state.updatedAt || 0)) applyRemote(res.data);
+        if (res.legacy) return sbPush();
+      });
+    }).then(function(){
+      $("sbPw").value = ""; $("sbPhrase").value = ""; persist();
+      msg.className = "err ok"; msg.textContent = "Connecté. Tes données sont chiffrées avant chaque envoi."; paintSync();
+    });
   }).catch(function(e){ msg.className = "err"; msg.textContent = syncErr(e); });
 }
 function sbPush(){
   if (!state.sync || !state.sync.access) return Promise.resolve();
-  return sbReq("/rest/v1/carnets?on_conflict=user_id", { method: "POST", prefer: "resolution=merge-duplicates,return=minimal",
-    body: { user_id: state.sync.uid, data: exportData(), updated_at: new Date(state.updatedAt || Date.now()).toISOString() } })
-    .then(function(){ state.sync.last = Date.now(); persist(); paintSync(); });
+  return e2eSeal(exportData()).then(function(blob){
+    return sbReq("/rest/v1/carnets?on_conflict=user_id", { method: "POST", prefer: "resolution=merge-duplicates,return=minimal",
+      body: { user_id: state.sync.uid, data: blob, updated_at: new Date(state.updatedAt || Date.now()).toISOString() } });
+  }).then(function(){ state.sync.last = Date.now(); persist(); paintSync(); });
 }
 function applyRemote(data){
   var keep = { sync: state.sync, active: state.active }, d = normalize(data);
@@ -64,23 +109,27 @@ function applyRemote(data){
 /* onlyIfNewer : au démarrage, ne remplace que si le serveur a plus récent */
 function sbPull(onlyIfNewer){
   if (!state.sync || !state.sync.access) return Promise.resolve(false);
-  return sbReq("/rest/v1/carnets?select=data,updated_at&user_id=eq." + encodeURIComponent(state.sync.uid)).then(function(rows){
-    if (!rows || !rows.length) return false;
-    var remote = rows[0], rt = Date.parse(remote.updated_at) || 0;
+  if (!state.sync.phrase) return Promise.reject(new Error("NOPHRASE"));
+  return sbFetchRow(state.sync).then(function(row){
+    if (!row) return false;
+    var rt = Date.parse(row.updated_at) || 0;
     if (onlyIfNewer && rt <= (state.updatedAt || 0)) return true;
-    applyRemote(remote.data); state.sync.last = Date.now(); persist(); paintSync();
-    return true;
+    return e2eOpen(row.data, state.sync.phrase).then(function(res){
+      if (res.salt) state.sync.salt = res.salt;
+      applyRemote(res.data); state.sync.last = Date.now(); persist(); paintSync();
+      return res.legacy ? sbPush().then(function(){ return true; }) : true;
+    });
   });
 }
 function schedulePush(){
-  if (!state.sync || !state.sync.access) return;
+  if (!state.sync || !state.sync.access || !state.sync.phrase) return;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(function(){ sbPush().catch(function(e){ if (!pushWarned){ pushWarned = true; toast("Synchro en attente : " + syncErr(e).split(".")[0]); } }); }, 2500);
 }
 function paintSync(){
-  var on = !!(state.sync && state.sync.access);
+  var on = !!(state.sync && state.sync.access && state.sync.phrase);
   $("syncForm").hidden = on; $("syncOn").hidden = !on;
-  if (on) $("syncState").textContent = "Connecté en ligne : " + state.sync.email + (state.sync.last ? " · dernière synchro " + new Date(state.sync.last).toLocaleString("fr-FR", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) : "") + ". Chaque modification est envoyée automatiquement.";
+  if (on) $("syncState").textContent = "Connecté en ligne : " + state.sync.email + (state.sync.last ? " · dernière synchro " + new Date(state.sync.last).toLocaleString("fr-FR", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) : "") + ". Chaque modification est chiffrée sur ce téléphone puis envoyée automatiquement : le serveur ne voit qu'un bloc illisible.";
   else {
     $("syncState").textContent = "Sauvegarde tes séances sur un serveur Supabase (gratuit) pour les retrouver sur un autre téléphone.";
     if (state.sync){ $("sbUrl").value = state.sync.url || ""; $("sbKey").value = state.sync.key || ""; $("sbEmail").value = state.sync.email || ""; }
@@ -96,7 +145,10 @@ $("sbPull").addEventListener("click", function(){
     sbPull(false).then(function(found){ m.className = "err ok"; m.textContent = found ? "Données récupérées depuis le serveur." : "Rien sur le serveur pour l'instant."; }, function(e){ m.className = "err"; m.textContent = syncErr(e); });
   });
 });
-$("sbLogout").addEventListener("click", function(){ if (state.sync){ state.sync.access = null; state.sync.refresh = null; } persist(); paintSync(); $("syncMsg").textContent = ""; });
+$("sbLogout").addEventListener("click", function(){
+  if (state.sync){ state.sync.access = null; state.sync.refresh = null; state.sync.phrase = null; state.sync.salt = null; }
+  e2eCache = { salt: null, phrase: null, key: null }; persist(); paintSync(); $("syncMsg").textContent = "";
+});
 $("sqlCopy").addEventListener("click", function(){ copyText($("sqlBox"), $("sqlCopy"), "Copier le code"); });
 function copyText(ta, btn, label){
   var done = function(){ btn.textContent = "Copié !"; setTimeout(function(){ btn.textContent = label; }, 1800); };

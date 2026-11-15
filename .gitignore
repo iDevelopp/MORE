@@ -4,3 +4,6 @@ Thumbs.db
 .env
 .env.*
 node_modules/
+
+# Dossier de travail de l app Claude (ne pas publier)
+Claude outputs/

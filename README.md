@@ -1,8 +1,8 @@
 # MORE — My Own Rep Evolution
 
-**Version 1.0 (V1)** · Application web privée de suivi de musculation · *Uplift yourself.*
+**Version 1.1 (V1.1)** · Application web privée de suivi de musculation · *Uplift yourself.*
 
-MORE est un carnet d'entraînement pensé pour l'iPhone : on note ses séances (machines, haltères, tapis de sol, tapis de course) et on suit sa progression en courbes. L'app fonctionne entièrement dans le navigateur, s'ajoute à l'écran d'accueil comme une vraie application et peut, en option, se synchroniser avec un projet Supabase.
+MORE est un carnet d'entraînement pensé pour l'iPhone : on note ses séances (machines, haltères, tapis de sol, tapis de course) et on suit sa progression en courbes. L'app fonctionne entièrement dans le navigateur, s'ajoute à l'écran d'accueil comme une vraie application et peut, en option, se synchroniser avec un projet Supabase, avec un chiffrement de bout en bout.
 
 > Projet personnel à usage privé. Code propriétaire, tous droits réservés — voir [LICENSE](LICENSE).
 
@@ -17,6 +17,7 @@ MORE est un carnet d'entraînement pensé pour l'iPhone : on note ses séances (
 - **Historique** : volume par séance, poids levé, répétitions selon le poids, calendrier mensuel, notes de séance.
 - **Mon corps** : poids, taille, IMC et courbe de poids.
 - **Jusqu'à 3 comptes** par téléphone, données chiffrées localement.
+- **Synchronisation chiffrée de bout en bout** (option) : le serveur ne stocke qu'un bloc illisible.
 - **Thème** sombre, clair ou automatique ; animations respectant « Réduire les animations ».
 
 ## Structure du projet
@@ -79,11 +80,19 @@ Sert à sauvegarder les données en ligne et à utiliser l'app sur plusieurs té
 2. **SQL Editor** → colle le contenu de [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
 3. **Authentication → URL Configuration** : mets l'adresse GitHub Pages de l'app dans *Site URL*.
 4. **Project Settings → API** : note l'adresse du projet (`https://xxxx.supabase.co`) et la clé **anon public**.
-5. Dans MORE : **Réglages → Synchronisation** → colle l'adresse et la clé, saisis ton e-mail et un mot de passe en ligne → **Créer le compte**, puis **Se connecter**. Ton ami fait de même sur son téléphone.
+5. Dans MORE : **Réglages → Synchronisation** → colle l'adresse et la clé, saisis ton e-mail, un mot de passe en ligne et une **phrase secrète** (12 caractères minimum) → **Créer le compte**, puis **Se connecter**. Ton ami fait de même sur son téléphone, avec sa propre phrase.
 6. Une fois vos deux comptes créés : **Authentication → Sign In / Providers → Email** → désactive **Allow new users to sign up**. Plus personne d'autre ne peut s'inscrire.
 7. Active la double authentification sur ton compte Supabase (le tableau de bord).
 
 La clé *anon public* est faite pour être visible : la protection repose sur les règles RLS du schéma (chacun ne lit et n'écrit que sa propre ligne) et sur la fermeture des inscriptions.
+
+### Chiffrement de bout en bout
+
+Avant chaque envoi, MORE chiffre le carnet **sur le téléphone** (AES-GCM 256 bits, clé dérivée de la phrase secrète par PBKDF2-SHA-256, 250 000 itérations). Supabase ne reçoit que `{ v, salt, iv, ct }` : ni l'administrateur du projet ni Supabase ne peuvent lire les séances. La phrase n'est jamais envoyée ; elle est gardée dans le compte local, lui-même chiffré.
+
+- **Mot de passe en ligne** : sert à se connecter, réinitialisable par e-mail.
+- **Phrase secrète** : sert à lire les données, **non récupérable**. À noter dans un gestionnaire de mots de passe.
+- Sur un nouveau téléphone : même e-mail, même mot de passe, **même phrase**.
 
 ## Configuration
 

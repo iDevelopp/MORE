@@ -48,7 +48,8 @@ function normalize(d){
     settings: { rest: [0,60,90,120].indexOf(+st.rest) >= 0 ? +st.rest : 90, warmup: st.warmup !== false },
     sync: d.sync && typeof d.sync.url === "string" && /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(d.sync.url) ? {
       url: d.sync.url, key: safeStr(d.sync.key, 400), email: safeStr(d.sync.email, 120), access: d.sync.access ? String(d.sync.access) : null,
-      refresh: d.sync.refresh ? String(d.sync.refresh) : null, uid: /^[0-9a-f-]{36}$/i.test(d.sync.uid || "") ? d.sync.uid : null, last: safeNum(d.sync.last, 1e13) } : null,
+      refresh: d.sync.refresh ? String(d.sync.refresh) : null, uid: /^[0-9a-f-]{36}$/i.test(d.sync.uid || "") ? d.sync.uid : null, last: safeNum(d.sync.last, 1e13),
+      phrase: typeof d.sync.phrase === "string" ? d.sync.phrase.slice(0, 200) : null, salt: /^[A-Za-z0-9+\/=]{16,64}$/.test(d.sync.salt || "") ? d.sync.salt : null } : null,
     updatedAt: safeNum(d.updatedAt, 1e13)
   };
 }

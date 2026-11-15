@@ -293,7 +293,7 @@
       <div class="set-foot">
         <div class="set-foot-mark"><svg class="mark" viewBox="0 0 256 256" aria-hidden="true"><path class="mk-m" d="M46 204 L84 112 L124 170 L174 60 L212 204" pathLength="1"/><path class="mk-g" d="M124 170 L174 60" pathLength="1"/></svg></div>
         <b>MORE</b>
-        <span>My Own Rep Evolution · V1 · version 1.0</span>
+        <span>My Own Rep Evolution · V1.1 · version 1.1</span>
       </div>
     </div>
 
@@ -355,6 +355,8 @@
         <div class="field"><label for="sbKey">Clé publique (anon key)</label><input class="input" id="sbKey" placeholder="eyJhbGciOi…" autocomplete="off" autocapitalize="off"></div>
         <div class="field"><label for="sbEmail">E-mail</label><input class="input" id="sbEmail" type="email" autocomplete="email" autocapitalize="off"></div>
         <div class="field"><label for="sbPw">Mot de passe en ligne</label><input class="input" id="sbPw" type="password" autocomplete="current-password"></div>
+        <div class="field"><label for="sbPhrase">Phrase secrète de chiffrement</label><input class="input" id="sbPhrase" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. banane-tapis-orage-74">
+          <p class="hint" style="margin:2px 0 0">12 caractères minimum. Elle chiffre tes données sur ce téléphone avant l'envoi : ni Supabase ni personne d'autre ne peut les lire. Note-la dans ton Trousseau : si tu l'oublies, la sauvegarde en ligne est perdue.</p></div>
         <div class="row">
           <button class="btn sm" id="sbLogin" type="button">Se connecter</button>
           <button class="btn ghost sm" id="sbSignup" type="button">Créer le compte</button>
@@ -377,10 +379,11 @@ create policy "créer ses données" on public.carnets for insert to authenticate
 create policy "modifier ses données" on public.carnets for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "supprimer ses données" on public.carnets for delete to authenticated using ((select auth.uid()) = user_id);</textarea>
           <button class="btn ghost sm" id="sqlCopy" type="button" style="margin-top:8px">Copier le code</button>
-          <div class="explain"><div>3. Dans « Project Settings → API », copie l'adresse du projet et la clé <b style="display:inline">anon public</b>.<br>4. Crée vos comptes, puis dans « Authentication → Sign In / Providers », désactive « Allow new users to sign up » pour que personne d'autre ne puisse s'inscrire.</div></div>
+          <div class="explain"><div>3. Dans « Project Settings → API », copie l'adresse du projet et la clé <b style="display:inline">anon public</b>.<br>4. Crée vos comptes, puis dans « Authentication → Sign In / Providers », désactive « Allow new users to sign up » pour que personne d'autre ne puisse s'inscrire.<br>5. Chacun choisit sa propre phrase secrète : vos données sont chiffrées séparément.</div></div>
         </details>
       </div>
       <div id="syncOn" class="stack" hidden>
+        <div class="glass card e2e-badge"><span class="set-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><span><b>Chiffrement de bout en bout actif</b><br><span class="muted small">AES-GCM 256 bits · clé dérivée de ta phrase secrète, jamais envoyée.</span></span></div>
         <div class="row">
           <button class="btn sm" id="sbPush" type="button">Envoyer maintenant</button>
           <button class="btn ghost sm" id="sbPull" type="button">Récupérer</button>
@@ -433,7 +436,7 @@ create policy "supprimer ses données" on public.carnets for delete to authentic
       <button type="button" class="btn ghost" id="cancelCreate" style="margin-top:10px">Annuler</button>
     </form>
     <div class="demo" id="demoHint">Compte de démonstration : « Moi », mot de passe 1234</div>
-    <div class="demo ver">V1 · version 1.0</div>
+    <div class="demo ver">V1.1 · version 1.1</div>
     <button type="button" class="btn ghost sm" id="resetApp" style="margin-top:14px;color:var(--muted)">Effacer tous les comptes de ce téléphone</button>
   </div>
 </div>

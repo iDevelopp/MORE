@@ -145,7 +145,8 @@ function enterApp(data){
   var now = new Date(); calY = now.getFullYear(); calM = now.getMonth();
   $("fDate").value = todayISO(); $("fMachine").value = ""; setType("machine");
   renderAll(); go(state.active ? "workout" : "progress");
-  if (state.sync && state.sync.access) sbPull(true).catch(function(){});
+  e2eCache = { salt: null, phrase: null, key: null };
+  if (state.sync && state.sync.access && state.sync.phrase) sbPull(true).catch(function(e){ toast(syncErr(e).split(".")[0]); });
 }
 function logout(){ session = null; state = normalize(null); stopRest(); closeAll(); renderAll(); showLock(); }
 $("accList").addEventListener("click", function(e){
