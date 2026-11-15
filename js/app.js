@@ -131,23 +131,46 @@ function showLock(){
   if (!accounts.some(function(a){ return a.id === selectedAcc; })) selectedAcc = accounts.length === 1 ? accounts[0].id : null;
   $("lockSub").textContent = accounts.length ? "Choisis ton compte" : "Crée ton compte, ou connecte-toi s'il existe déjà";
   $("accList").innerHTML = accounts.map(function(a){
-    return '<button type="button" class="acc" data-acc="'+a.id+'" aria-pressed="'+(selectedAcc === a.id)+'">'+avatar(a.name)+'<span class="who"><b>'+esc(displayName(a.name))+'</b>'+(isEmail(a.name) ? '<small>'+esc(a.name)+'</small>' : '')+'</span></button>';
+    var sub = ONLINE && !a.online ? "Carnet local · à lier à ton compte" : isEmail(a.name) ? a.name : "";
+    return '<button type="button" class="acc" data-acc="'+a.id+'" aria-pressed="'+(selectedAcc === a.id)+'">'+avatar(a.name)+'<span class="who"><b>'+esc(displayName(a.name))+'</b>'+(sub ? '<small>'+esc(sub)+'</small>' : '')+'</span></button>';
   }).join("");
   $("loginForm").hidden = !selectedAcc;
   $("newAccBtn").hidden = accounts.length >= MAX_ACC;
   $("demoHint").hidden = !CONFIG.demo || !accounts.some(function(a){ return a.name === "Moi"; });
+  if (ONLINE){
+    $("newAccBtn").hidden = CONFIG.allowSignup === false || accounts.length >= MAX_ACC;
+    $("restoreAccBtn").textContent = "Ajouter un compte";
+    $("resetApp").textContent = "Retirer tous les comptes de ce téléphone";
+    $("lockSub").textContent = "Entre ton mot de passe";
+    if (!accounts.length) openRestore(false);
+  }
+}
+var restoreSignup = false;
+function openRestore(signup){
+  restoreSignup = !!signup;
+  $("lock").hidden = false; $("lockLogin").hidden = true; $("createForm").hidden = true; $("restoreForm").hidden = false; $("demoHint").hidden = true;
+  $("lockSub").textContent = signup ? "Crée ton compte MORE" : ONLINE ? "Connecte-toi avec ton compte MORE" : "Connexion à ton compte en ligne";
+  $("rIntro").textContent = signup ? "Ton compte sert sur tous tes appareils. Tes séances sont chiffrées avec ta phrase secrète avant d'être sauvegardées."
+    : ONLINE ? "Ton e-mail et ton mot de passe MORE. La phrase secrète n'est demandée qu'une fois par appareil." : "Retrouve ton compte et tes séances sur ce téléphone.";
+  $("rHint").textContent = ONLINE ? "Note ta phrase secrète en lieu sûr : sans elle, impossible de relire tes séances sur un nouvel appareil." : "Ce mot de passe servira aussi à déverrouiller MORE sur ce téléphone.";
+  $("rUrlF").hidden = SB_PRESET; $("rKeyF").hidden = SB_PRESET; $("rPw2F").hidden = !signup;
+  $("restoreErr").className = "err"; $("restoreErr").textContent = "";
+  $("restoreBtn").textContent = signup ? "Créer le compte" : "Se connecter";
+  $("cancelRestore").hidden = ONLINE && !accounts.length;
+  $("resetApp").hidden = ONLINE && !accounts.length;
 }
 function shakeLock(){ var c = $("lockCard"); c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake"); }
-function enterApp(data){
+function enterApp(data, skipPull){
   state = normalize(data); fails = 0; drafts = {}; filter = "all"; pushWarned = false;
   $("loginPw").value = "";
   if (reduced) $("lock").hidden = true;
-  else { $("lock").classList.add("unlocking"); setTimeout(function(){ $("lock").hidden = true; $("lock").classList.remove("unlocking"); }, 420); }
+  else { $("lock").classList.add("unlocking"); setTimeout(function(){ $("lock").classList.remove("unlocking"); if (session) $("lock").hidden = true; }, 420); }
   var now = new Date(); calY = now.getFullYear(); calM = now.getMonth();
   $("fDate").value = todayISO(); $("fMachine").value = ""; setType("machine");
   renderAll(); go(state.active ? "workout" : "progress");
   e2eCache = { salt: null, phrase: null, key: null };
-  if (state.sync && state.sync.access && state.sync.phrase) sbPull(true).catch(function(e){ toast(syncErr(e).split(".")[0]); });
+  if (!skipPull && state.sync && state.sync.access && state.sync.phrase) sbPull(true).catch(function(e){ toast(syncErr(e).split(".")[0]); });
+  if (ONLINE && !accOnline()) setTimeout(function(){ toast("Lie ce carnet à ton compte : Réglages → Synchronisation"); }, 900);
 }
 function logout(){ session = null; state = normalize(null); stopRest(); closeAll(); renderAll(); showLock(); }
 $("accList").addEventListener("click", function(e){
@@ -163,7 +186,10 @@ $("loginForm").addEventListener("submit", function(e){
   var waitMs = (acc.lockUntil || 0) - Date.now();
   if (waitMs > 0){ $("loginErr").textContent = "Trop d'essais. Réessaie dans " + Math.ceil(waitMs / 1000) + " s."; return; }
   btn.disabled = true; btn.textContent = "Vérification…"; $("loginErr").textContent = "";
-  function ok(data, key){ acc.fails = 0; acc.lockUntil = 0; writeAccounts(accounts); session = { id: acc.id, name: acc.name, key: key }; btn.disabled = false; btn.textContent = "Déverrouiller"; enterApp(data); }
+  function ok(data, key){
+    acc.fails = 0; acc.lockUntil = 0; writeAccounts(accounts); session = { id: acc.id, name: acc.name, key: key }; btn.disabled = false; btn.textContent = "Déverrouiller";
+    var online = ONLINE && acc.online; enterApp(data, online); if (online) verifyOnline(acc, pw);
+  }
   function stop(msg){ btn.disabled = false; btn.textContent = "Déverrouiller"; $("loginErr").textContent = msg; }
   function wrong(){
     acc.fails = (acc.fails || 0) + 1; shakeLock(); $("loginPw").value = "";
@@ -178,11 +204,18 @@ $("loginForm").addEventListener("submit", function(e){
   deriveKey(pw, unb64(acc.salt)).then(function(key){
     return decrypt(key, acc).then(function(d){ ok(d, key); });
   }).catch(function(err){
-    if (err && err.name && err.name !== "OperationError") stop("Erreur technique (" + err.name + "). Essaie « Effacer tous les comptes » ci-dessous.");
-    else wrong();
+    if (err && err.name && err.name !== "OperationError"){ stop("Erreur technique (" + err.name + "). Essaie « Effacer tous les comptes » ci-dessous."); return; }
+    if (!(ONLINE && acc.online)){ wrong(); return; }
+    /* le mot de passe a peut-être changé depuis un autre appareil : on demande au serveur */
+    sbReq("/auth/v1/token?grant_type=password", { method: "POST", anon: true, body: { email: acc.name, password: pw } }, sbCfg()).then(function(){
+      stop(""); openRestore(false); $("rEmail").value = acc.name; $("rPw").value = pw;
+      $("restoreErr").className = "err muted"; $("restoreErr").textContent = "Ton mot de passe a changé depuis un autre appareil. Entre ta phrase secrète pour récupérer tes séances.";
+      $("rPhrase").focus();
+    }, function(){ wrong(); });
   });
 });
 $("newAccBtn").addEventListener("click", function(){
+  if (ONLINE){ openRestore(true); return; }
   $("lockLogin").hidden = true; $("createForm").hidden = false; $("demoHint").hidden = true;
   $("lockSub").textContent = "Nouveau compte (" + (accounts.length + 1) + " sur " + MAX_ACC + ")";
   $("cName").value = ""; $("cPw").value = ""; $("cPw2").value = ""; $("createErr").textContent = ""; $("cName").focus();
@@ -210,11 +243,7 @@ $("createForm").addEventListener("submit", function(e){
 $("lockBtn").addEventListener("click", logout);
 
 /* Se connecter avec un compte en ligne existant : récupère et déchiffre les séances, puis crée le compte local */
-$("restoreAccBtn").addEventListener("click", function(){
-  $("lockLogin").hidden = true; $("createForm").hidden = true; $("restoreForm").hidden = false; $("demoHint").hidden = true;
-  $("lockSub").textContent = "Connexion à ton compte en ligne";
-  $("rUrlF").hidden = SB_PRESET; $("rKeyF").hidden = SB_PRESET; $("restoreErr").textContent = ""; $("rEmail").focus();
-});
+$("restoreAccBtn").addEventListener("click", function(){ openRestore(false); $("rEmail").focus(); });
 $("cancelRestore").addEventListener("click", showLock);
 $("restoreForm").addEventListener("submit", function(e){
   e.preventDefault();
@@ -225,12 +254,16 @@ $("restoreForm").addEventListener("submit", function(e){
   if (!hasCrypto){ err.textContent = "Ce navigateur ne permet pas le chiffrement : ouvre MORE dans Safari via son adresse https."; return; }
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.url) || cfg.key.length < 20){ err.textContent = "Adresse du projet ou clé publique invalide."; return; }
   if (!isEmail(email) || pw.length < 8){ err.textContent = "E-mail valide et mot de passe de 8 caractères minimum."; return; }
+  if (restoreSignup && pw !== $("rPw2").value){ err.textContent = "Les deux mots de passe ne sont pas identiques."; return; }
   if (phrase.length < 12){ err.textContent = "Entre ta phrase secrète (12 caractères minimum)."; return; }
-  if (accounts.length >= MAX_ACC){ err.textContent = "3 comptes maximum sur ce téléphone."; return; }
-  if (accounts.some(function(a){ return a.name.toLowerCase() === email; })){ err.textContent = "Ce compte est déjà sur ce téléphone : touche-le dans la liste pour te connecter."; return; }
-  btn.disabled = true; btn.textContent = "Connexion…"; err.className = "err muted"; err.textContent = "Connexion…";
+  var existing = accounts.find(function(a){ return a.name.toLowerCase() === email; });
+  if (existing && !ONLINE){ err.textContent = "Ce compte est déjà sur ce téléphone : touche-le dans la liste pour te connecter."; return; }
+  if (!existing && accounts.length >= MAX_ACC){ err.textContent = "3 comptes maximum sur ce téléphone."; return; }
+  var label = restoreSignup ? "Créer le compte" : "Se connecter";
+  btn.disabled = true; btn.textContent = "Connexion…"; err.className = "err muted"; err.textContent = restoreSignup ? "Création du compte…" : "Connexion…";
   var tmp = null;
-  sbReq("/auth/v1/token?grant_type=password", { method: "POST", anon: true, body: { email: email, password: pw } }, cfg).then(function(j){
+  sbReq(restoreSignup ? "/auth/v1/signup" : "/auth/v1/token?grant_type=password", { method: "POST", anon: true, body: { email: email, password: pw } }, cfg).then(function(j){
+    if (restoreSignup && j && !j.access_token) throw new Error("CONFIRM");
     if (!j || !j.access_token || !j.user || !/^[0-9a-f-]{36}$/i.test(j.user.id || "")) throw new Error("Réponse inattendue du serveur");
     tmp = { url: cfg.url, key: cfg.key, email: email, access: j.access_token, refresh: j.refresh_token, uid: j.user.id, last: 0, phrase: phrase, salt: null };
     err.textContent = "Déchiffrement de tes séances…";
@@ -240,12 +273,14 @@ $("restoreForm").addEventListener("submit", function(e){
   }).then(function(res){
     var d = normalize(res.data); if (res.salt) tmp.salt = res.salt;
     d.sync = tmp; d.sync.last = Date.now(); d.updatedAt = d.updatedAt || Date.now();
+    if (existing){ accounts = accounts.filter(function(a){ return a.id !== existing.id; }); writeAccounts(accounts); }
     return createAccount(email, pw, JSON.parse(JSON.stringify(d))).then(function(r){
+      r.acc.online = true; writeAccounts(accounts);
       session = { id: r.acc.id, name: r.acc.name, key: r.key }; selectedAcc = r.acc.id;
-      btn.disabled = false; btn.textContent = "Se connecter"; $("rPw").value = ""; $("rPhrase").value = ""; err.textContent = "";
+      btn.disabled = false; btn.textContent = label; $("rPw").value = ""; $("rPw2").value = ""; $("rPhrase").value = ""; err.textContent = "";
       enterApp(d); toast(d.entries.length ? "Bon retour " + displayName(email) + " : tes séances sont là" : "Connecté. Aucune séance en ligne pour l'instant.");
     });
-  }).catch(function(e2){ btn.disabled = false; btn.textContent = "Se connecter"; err.className = "err"; err.textContent = syncErr(e2); });
+  }).catch(function(e2){ btn.disabled = false; btn.textContent = label; err.className = (e2 && e2.message === "CONFIRM") ? "err ok" : "err"; err.textContent = syncErr(e2); });
 });
 var hiddenAt = 0;
 document.addEventListener("visibilitychange", function(){

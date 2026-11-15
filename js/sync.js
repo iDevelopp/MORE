@@ -32,7 +32,7 @@ function sbFetchRow(sync){
   return sbReq("/rest/v1/carnets?select=data,updated_at&user_id=eq." + encodeURIComponent(sync.uid), {}, sync)
     .then(function(rows){ return rows && rows.length ? rows[0] : null; });
 }
-function sbBase(u){ return String(u || "").trim().replace(/\/+$/, ""); }
+function sbBase(u){ return String(u || "").trim().replace(/\/(rest|auth)\/v1.*$/i, "").replace(/\/+$/, ""); }
 function sbReq(path, opts, sync){
   sync = sync || state.sync; opts = opts || {};
   var headers = { "apikey": sync.key, "Content-Type": "application/json" };
@@ -55,6 +55,7 @@ function sbRefresh(sync){
   });
 }
 function syncErr(e){
+  if (e && e.message === "CONFIRM") return "Compte créé. Confirme ton e-mail (lien reçu), puis connecte-toi.";
   if (e && e.message === "NETWORK") return "Connexion impossible. Dans l'aperçu Claude, la synchro est bloquée : elle marche une fois l'app sur GitHub Pages (ou vérifie l'adresse du projet).";
   var m = (e && e.message) || "Erreur inconnue";
   if (/invalid login/i.test(m)) return "E-mail ou mot de passe en ligne incorrect.";
@@ -91,6 +92,7 @@ function sbAuth(signup){
       });
     }).then(function(){
       $("sbPw").value = ""; $("sbPhrase").value = ""; persist();
+      if (ONLINE && session && !accOnline()) rekeyAccount(pw, email).then(function(){ paintSync(); toast("Carnet lié à " + email + " : ton mot de passe en ligne ouvre maintenant MORE"); }, function(){});
       msg.className = "err ok"; msg.textContent = "Connecté. Tes données sont chiffrées avant chaque envoi."; paintSync();
     });
   }).catch(function(e){ msg.className = "err"; msg.textContent = syncErr(e); });
@@ -128,11 +130,45 @@ function schedulePush(){
 }
 /* Si l'adresse et la clé Supabase sont dans js/config.js, l'utilisateur n'a plus à les saisir */
 var SB_PRESET = !!(CONFIG.supabaseUrl && CONFIG.supabaseKey);
+/* Mode en ligne : le compte MORE est le compte Supabase (plus de compte purement local) */
+var ONLINE = !CONFIG.demo && SB_PRESET;
+function sbCfg(){ return { url: sbBase(CONFIG.supabaseUrl), key: CONFIG.supabaseKey }; }
+function curAcc(){ return session ? accounts.find(function(x){ return x.id === session.id; }) : null; }
+function accOnline(){ var a = curAcc(); return !!(a && a.online); }
+/* Rechiffre la copie locale avec un nouveau mot de passe (et la rattache au compte en ligne si name est donné) */
+function rekeyAccount(pw, name){
+  if (!session || !hasCrypto) return Promise.reject(new Error("Chiffrement indisponible sur ce navigateur"));
+  var salt = crypto.getRandomValues(new Uint8Array(16)), sess = session;
+  return deriveKey(pw, salt).then(function(key){
+    return saveQueue.then(function(){ return encrypt(key, JSON.parse(JSON.stringify(state))); }).then(function(enc){
+      var a = accounts.find(function(x){ return x.id === sess.id; }); if (!a) return;
+      a.salt = b64(salt); a.iv = enc.iv; a.data = enc.data; delete a.mode; delete a.hash; delete a.plain;
+      if (name){ a.name = name; a.online = true; sess.name = name; }
+      writeAccounts(accounts); sess.key = key;
+    });
+  });
+}
+/* À chaque ouverture : on vérifie le mot de passe auprès du serveur (sans bloquer si on est hors ligne) */
+function verifyOnline(acc, pw){
+  if (!ONLINE || !acc.online || !state.sync || !state.sync.email) return;
+  sbReq("/auth/v1/token?grant_type=password", { method: "POST", anon: true, body: { email: state.sync.email, password: pw } }, sbCfg()).then(function(j){
+    if (!j || !j.access_token) return;
+    state.sync.url = sbCfg().url; state.sync.key = sbCfg().key;
+    state.sync.access = j.access_token; state.sync.refresh = j.refresh_token || state.sync.refresh; persist();
+    if (state.sync.phrase) return sbPull(true);
+  }).then(null, function(e){
+    if (e && /invalid login/i.test(e.message || "")){
+      var email = acc.name; logout(); openRestore(false); $("rEmail").value = email;
+      $("restoreErr").className = "err"; $("restoreErr").textContent = "Ton mot de passe a changé depuis un autre appareil : connecte-toi avec le nouveau.";
+    }
+  });
+}
 function paintSync(){
   var on = !!(state.sync && state.sync.access && state.sync.phrase);
   $("sbUrl").closest(".field").hidden = SB_PRESET; $("sbKey").closest(".field").hidden = SB_PRESET;
   $("sbSetup").hidden = SB_PRESET; $("sbSignup").hidden = SB_PRESET && CONFIG.allowSignup === false;
   $("syncForm").hidden = on; $("syncOn").hidden = !on;
+  $("sbLogout").hidden = ONLINE && accOnline();
   if (on) $("syncState").textContent = "Connecté en ligne : " + state.sync.email + (state.sync.last ? " · dernière synchro " + new Date(state.sync.last).toLocaleString("fr-FR", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) : "") + ". Chaque modification est chiffrée sur ce téléphone puis envoyée automatiquement : le serveur ne voit qu'un bloc illisible.";
   else {
     $("syncState").textContent = "Sauvegarde tes séances sur un serveur Supabase (gratuit) pour les retrouver sur un autre téléphone.";

@@ -9,7 +9,11 @@ $("settingsBtn").addEventListener("click", function(){
   $("pwMsg").textContent = ""; $("newPw").value = ""; $("newPw2").value = ""; $("syncMsg").textContent = "";
   $("accName").textContent = session ? session.name : ""; paintAvSeg();
   document.querySelectorAll("#warmSeg button").forEach(function(b){ b.setAttribute("aria-pressed", String((b.getAttribute("data-wu") === "1") === state.settings.warmup)); });
-  $("accMode").textContent = session && session.key ? "Tes données sont chiffrées sur ce téléphone avec ton mot de passe." : "Ce navigateur ne permet pas le chiffrement : le mot de passe protège l'accès à l'app.";
+  $("accMode").textContent = ONLINE && accOnline() ? "Compte en ligne : ce mot de passe ouvre MORE sur tous tes appareils. Tes séances sont chiffrées avec ta phrase secrète."
+    : session && session.key ? "Tes données sont chiffrées sur ce téléphone avec ton mot de passe." : "Ce navigateur ne permet pas le chiffrement : le mot de passe protège l'accès à l'app.";
+  $("curPwF").hidden = !(ONLINE && accOnline()); $("curPw").value = "";
+  $("switchBtn").textContent = ONLINE ? "Se déconnecter" : "Changer de compte";
+  $("delAccBtn").textContent = ONLINE && accOnline() ? "Retirer de ce téléphone" : "Supprimer";
   document.querySelectorAll("#restSeg button").forEach(function(b){ b.setAttribute("aria-pressed", String(+b.getAttribute("data-s") === state.settings.rest)); });
   applyTheme(); paintSync(); paintSetRoot(); showSetPage("root", true);
   openOv("settingsOverlay");
@@ -58,6 +62,19 @@ $("savePw").addEventListener("click", function(){
   if (pw.length < 8){ m.textContent = "Au moins 8 caractères."; return; }
   if (pw !== $("newPw2").value){ m.textContent = "Les deux mots de passe ne sont pas identiques."; return; }
   var okMsg = function(){ $("newPw").value = ""; $("newPw2").value = ""; m.className = "err ok"; m.textContent = "Mot de passe modifié."; };
+  if (ONLINE && accOnline()){
+    var cur = $("curPw").value, s = state.sync;
+    if (!cur){ m.textContent = "Entre ton mot de passe actuel."; return; }
+    if (!s || !s.email){ m.textContent = "Compte en ligne introuvable : reconnecte-toi."; return; }
+    m.className = "err muted"; m.textContent = "Modification…";
+    sbReq("/auth/v1/token?grant_type=password", { method: "POST", anon: true, body: { email: s.email, password: cur } }, sbCfg()).then(function(j){
+      s.access = j.access_token; s.refresh = j.refresh_token || s.refresh;
+      return sbReq("/auth/v1/user", { method: "PUT", body: { password: pw } });
+    }).then(function(){ return rekeyAccount(pw); }).then(function(){
+      $("curPw").value = ""; persist(); okMsg(); m.textContent = "Mot de passe modifié, en ligne et sur ce téléphone.";
+    }, function(e){ m.className = "err"; m.textContent = /invalid login/i.test(e && e.message || "") ? "Mot de passe actuel incorrect." : syncErr(e); });
+    return;
+  }
   if (!session.key){
     var ah = accounts.find(function(x){ return x.id === session.id; }); if (!ah) return;
     ah.salt = randSalt(); ah.hash = slowHash(pw, ah.salt); ah.plain = JSON.parse(JSON.stringify(state)); writeAccounts(accounts); okMsg(); return;
@@ -72,10 +89,14 @@ $("savePw").addEventListener("click", function(){
 });
 $("switchBtn").addEventListener("click", function(){ logout(); });
 $("delAccBtn").addEventListener("click", function(){
-  armed($("delAccBtn"), "Supprimer", "Sûr ? Retouche", function(){
+  var online = ONLINE && accOnline();
+  armed($("delAccBtn"), online ? "Retirer de ce téléphone" : "Supprimer", "Sûr ? Retouche", function(){
     var id = session && session.id;
-    accounts = accounts.filter(function(a){ return a.id !== id; }); writeAccounts(accounts);
-    selectedAcc = null; logout(); toast("Compte supprimé");
+    var done = function(){
+      accounts = accounts.filter(function(a){ return a.id !== id; }); writeAccounts(accounts);
+      selectedAcc = null; logout(); toast(online ? "Retiré de ce téléphone. Tes séances restent en ligne." : "Compte supprimé");
+    };
+    if (online && state.sync && state.sync.access) sbPush().then(done, done); else done();
   });
 });
 $("copyBtn").addEventListener("click", function(){ $("backup").value = JSON.stringify(exportData()); copyText($("backup"), $("copyBtn"), "Copier"); });

@@ -306,6 +306,7 @@
       </div>
       <div class="glass card">
         <h2 style="margin-bottom:12px">Mot de passe</h2>
+        <div class="field" id="curPwF" hidden><label for="curPw">Mot de passe actuel</label><input class="input" id="curPw" type="password" autocomplete="current-password"></div>
         <div class="field"><label for="newPw">Nouveau mot de passe</label><input class="input" id="newPw" type="password" autocomplete="new-password"></div>
         <div class="field"><label for="newPw2">Confirme-le</label><input class="input" id="newPw2" type="password" autocomplete="new-password"></div>
         <p class="err" id="pwMsg"></p>
@@ -428,13 +429,14 @@ create policy "supprimer ses données" on public.carnets for delete to authentic
       <button type="button" class="btn ghost" id="restoreAccBtn" style="margin-top:10px">J'ai déjà un compte en ligne</button>
     </div>
     <form id="restoreForm" novalidate hidden>
-      <p class="set-note" style="margin:0 0 16px;text-align:center">Retrouve ton compte et tes séances sur ce téléphone.</p>
+      <p class="set-note" id="rIntro" style="margin:0 0 16px;text-align:center">Retrouve ton compte et tes séances sur ce téléphone.</p>
       <div class="field" id="rUrlF"><label for="rUrl">Adresse du projet Supabase</label><input class="input" id="rUrl" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off"></div>
       <div class="field" id="rKeyF"><label for="rKey">Clé publique (anon key)</label><input class="input" id="rKey" autocomplete="off" autocapitalize="off"></div>
       <div class="field"><label for="rEmail">E-mail</label><input class="input" id="rEmail" type="email" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
       <div class="field"><label for="rPw">Mot de passe</label><input class="input" id="rPw" type="password" autocomplete="current-password"></div>
+      <div class="field" id="rPw2F" hidden><label for="rPw2">Confirme le mot de passe</label><input class="input" id="rPw2" type="password" autocomplete="new-password"></div>
       <div class="field"><label for="rPhrase">Phrase secrète</label><input class="input" id="rPhrase" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
-      <p class="hint" style="margin:10px 0 0">Ce mot de passe servira aussi à déverrouiller MORE sur ce téléphone.</p>
+      <p class="hint" id="rHint" style="margin:10px 0 0">Ce mot de passe servira aussi à déverrouiller MORE sur ce téléphone.</p>
       <p class="err" id="restoreErr" role="alert"></p>
       <button class="btn" type="submit" id="restoreBtn">Se connecter</button>
       <button type="button" class="btn ghost" id="cancelRestore" style="margin-top:10px">Annuler</button>
@@ -455,7 +457,7 @@ create policy "supprimer ses données" on public.carnets for delete to authentic
 </div>
 
 <div class="toast glass" id="toast" hidden role="status"></div>
-<script src="js/config.js?v=0c344f4310"></script>
+<script src="js/config.js?v=1928f081cf"></script>
 <script src="js/core.js?v=ec296db756"></script>
 <script src="js/data.js?v=261a7bd77e"></script>
 <script src="js/crypto.js?v=fa384900d3"></script>
@@ -465,8 +467,8 @@ create policy "supprimer ses données" on public.carnets for delete to authentic
 <script src="js/form.js?v=477cc488fe"></script>
 <script src="js/exercise.js?v=576ed1fb5f"></script>
 <script src="js/workout.js?v=ee1e568e97"></script>
-<script src="js/sync.js?v=e63d03939a"></script>
-<script src="js/settings.js?v=7510d24f6b"></script>
-<script src="js/app.js?v=fc8855dc25"></script>
+<script src="js/sync.js?v=2281e08548"></script>
+<script src="js/settings.js?v=afe6c8b6d3"></script>
+<script src="js/app.js?v=072cd5e554"></script>
 </body>
 </html>
