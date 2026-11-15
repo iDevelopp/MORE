@@ -304,6 +304,15 @@ details summary{font-size:13px;font-weight:500;color:var(--muted);cursor:pointer
 /* verrou */
 .lock{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:24px;background:var(--ink);overflow-y:auto}
 .lock[hidden]{display:none}
+.lock{padding-top:calc(env(safe-area-inset-top) + 84px)}
+.lock-bar{position:fixed;z-index:2;left:50%;top:calc(env(safe-area-inset-top) + 14px);transform:translateX(-50%);width:calc(100% - 32px);max-width:560px;
+  display:flex;align-items:center;justify-content:space-between;padding:7px 7px 7px 18px;border-radius:999px;
+  background:var(--glass-bg);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid var(--line-2);box-shadow:inset 0 1px 0 var(--hl),0 20px 50px -20px rgba(0,0,0,.6)}
+.lock-bar[hidden]{display:none}
+.lock-brand{display:flex;align-items:center;gap:9px;color:var(--text);text-decoration:none;font-weight:600;font-size:13px;letter-spacing:.32em}
+.lock-brand .mark{width:20px;height:20px}
+.lock-home{min-height:36px;padding:0 16px;border-radius:999px;display:inline-flex;align-items:center;font-size:14px;font-weight:600;color:var(--text);text-decoration:none;background:rgba(var(--w),.08);border:1px solid var(--line-2)}
 .lock-card{width:100%;max-width:360px;padding:34px 24px 24px;border-radius:28px}
 .lock-logo{width:64px;height:64px;border-radius:16px;margin:0 auto 18px;display:grid;place-items:center;color:#fff;background:#000;border:1px solid rgba(255,255,255,.14)}
 .lock-logo .mark{width:36px;height:36px}

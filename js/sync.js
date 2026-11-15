@@ -113,9 +113,9 @@ function sbPull(onlyIfNewer){
   if (!state.sync || !state.sync.access) return Promise.resolve(false);
   if (!state.sync.phrase) return Promise.reject(new Error("NOPHRASE"));
   return sbFetchRow(state.sync).then(function(row){
-    if (!row) return false;
+    if (!row){ if (onlyIfNewer && state.entries.length) schedulePush(); return false; }
     var rt = Date.parse(row.updated_at) || 0;
-    if (onlyIfNewer && rt <= (state.updatedAt || 0)) return true;
+    if (onlyIfNewer && rt <= (state.updatedAt || 0)){ if (rt < (state.updatedAt || 0)) schedulePush(); return true; }
     return e2eOpen(row.data, state.sync.phrase).then(function(res){
       if (res.salt) state.sync.salt = res.salt;
       applyRemote(res.data); state.sync.last = Date.now(); persist(); paintSync();
@@ -123,10 +123,15 @@ function sbPull(onlyIfNewer){
     });
   });
 }
+var pushPending = false;
 function schedulePush(){
   if (!state.sync || !state.sync.access || !state.sync.phrase) return;
-  clearTimeout(pushTimer);
-  pushTimer = setTimeout(function(){ sbPush().catch(function(e){ if (!pushWarned){ pushWarned = true; toast("Synchro en attente : " + syncErr(e).split(".")[0]); } }); }, 2500);
+  clearTimeout(pushTimer); pushPending = true;
+  pushTimer = setTimeout(flushPush, 400);
+}
+function flushPush(){
+  clearTimeout(pushTimer); if (!pushPending) return; pushPending = false;
+  sbPush().then(function(){ pushWarned = false; }, function(e){ pushPending = true; if (!pushWarned){ pushWarned = true; toast("Synchro en attente : " + syncErr(e).split(".")[0]); } });
 }
 /* Si l'adresse et la clé Supabase sont dans js/config.js, l'utilisateur n'a plus à les saisir */
 var SB_PRESET = !!(CONFIG.supabaseUrl && CONFIG.supabaseKey);

@@ -15,6 +15,7 @@ $("settingsBtn").addEventListener("click", function(){
   $("switchBtn").textContent = ONLINE ? "Se déconnecter" : "Changer de compte";
   $("delAccBtn").textContent = ONLINE && accOnline() ? "Retirer de ce téléphone" : "Supprimer";
   document.querySelectorAll("#restSeg button").forEach(function(b){ b.setAttribute("aria-pressed", String(+b.getAttribute("data-s") === state.settings.rest)); });
+  $("resetBtn").hidden = ONLINE;
   applyTheme(); paintSync(); paintSetRoot(); showSetPage("root", true);
   openOv("settingsOverlay");
 });
@@ -100,14 +101,35 @@ $("delAccBtn").addEventListener("click", function(){
   });
 });
 $("copyBtn").addEventListener("click", function(){ $("backup").value = JSON.stringify(exportData()); copyText($("backup"), $("copyBtn"), "Copier"); });
+/* Ajoute une sauvegarde aux données actuelles : séries, programmes, notes, pesées, sans doublons */
+function mergeData(d){
+  var sig = function(e){ return [e.date, e.machine, e.kind || "", e.weight || 0, (e.reps || []).join("-"), e.dur || 0, e.minutes || 0, e.km || 0].join("|"); };
+  var have = {}, added = 0, skipped = 0, routines = 0;
+  state.entries.forEach(function(e){ have[sig(e)] = 1; });
+  d.entries.forEach(function(e){ var s = sig(e); if (have[s]){ skipped++; return; } have[s] = 1; e.id = uid(); state.entries.push(e); added++; });
+  d.routines.forEach(function(r){ if (!state.routines.some(function(x){ return x.name === r.name; })){ r.id = uid(); state.routines.push(r); routines++; } });
+  Object.keys(d.meta).forEach(function(k){ if (!state.meta[k]) state.meta[k] = d.meta[k]; });
+  Object.keys(d.notes).forEach(function(k){ if (!state.notes[k]) state.notes[k] = d.notes[k]; });
+  d.profile.weights.forEach(function(w){ if (!state.profile.weights.some(function(x){ return x.date === w.date; })) state.profile.weights.push(w); });
+  if (!state.profile.height && d.profile.height) state.profile.height = d.profile.height;
+  return { added: added, skipped: skipped, routines: routines };
+}
+$("fileBtn").addEventListener("click", function(){ $("backupFile").click(); });
+$("backupFile").addEventListener("change", function(){
+  var f = this.files && this.files[0], m = $("backupMsg"); if (!f) return;
+  if (f.size > 5000000){ m.className = "err"; m.textContent = "Fichier trop gros (5 Mo maximum)."; return; }
+  var rd = new FileReader();
+  rd.onload = function(){ $("backup").value = String(rd.result || ""); m.className = "err muted"; m.textContent = "Fichier chargé : touche « Importer » pour l'ajouter."; };
+  rd.readAsText(f); this.value = "";
+});
 $("importBtn").addEventListener("click", function(){
   var m = $("backupMsg");
   try {
     if ($("backup").value.length > 5000000) throw 0;
     var raw = JSON.parse($("backup").value), data = Array.isArray(raw) ? { entries: raw } : raw;
     if (!data || !Array.isArray(data.entries)) throw 0;
-    var keep = { sync: state.sync }, d = normalize(data); d.sync = keep.sync; state = d; save(); renderAll();
-    m.className = "err ok"; m.textContent = state.entries.length + " séances importées.";
+    var d = normalize(data), r = mergeData(d); save(); renderAll();
+    m.className = "err ok"; m.textContent = r.added + " série" + (r.added > 1 ? "s" : "") + " ajoutée" + (r.added > 1 ? "s" : "") + (r.skipped ? " (" + r.skipped + " déjà présente" + (r.skipped > 1 ? "s" : "") + ")" : "") + (r.routines ? ", " + r.routines + " programme" + (r.routines > 1 ? "s" : "") : "") + ".";
   } catch(e){ m.className = "err"; m.textContent = "Ce texte n'est pas une sauvegarde valide."; }
 });
 $("resetBtn").addEventListener("click", function(){

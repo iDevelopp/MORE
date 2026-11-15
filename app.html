@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="icon" type="image/png" href="assets/favicon-32.png">
 <script src="js/theme-boot.js?v=ba1374a3c2"></script>
-<link rel="stylesheet" href="css/style.css?v=bc018c60d7">
+<link rel="stylesheet" href="css/style.css?v=61b569b8c2">
 </head>
 <body>
 <div class="splash" id="splash" aria-hidden="true"><div class="splash-tile"><svg class="mark draw-in" viewBox="0 0 256 256" aria-hidden="true"><path class="mk-m" d="M46 204 L84 112 L124 170 L174 60 L212 204" pathLength="1"/><path class="mk-g" d="M124 170 L174 60" pathLength="1"/></svg></div><div class="splash-word">MORE<small>Uplift yourself.</small></div></div>
@@ -396,13 +396,15 @@ create policy "supprimer ses données" on public.carnets for delete to authentic
 
     <!-- Sauvegarde -->
     <div class="set-page" data-sp="backup" hidden>
-      <p class="set-note">Copie tes données pour les garder ailleurs (dans Notes par exemple), ou colle une sauvegarde pour les restaurer.</p>
+      <p class="set-note">Copie tes données pour les garder ailleurs, ou importe une sauvegarde : elle s'ajoute à tes séances, sans rien effacer (les doublons sont ignorés).</p>
       <div class="glass card">
         <textarea class="input mono" id="backup" aria-label="Données JSON"></textarea>
         <div class="row" style="margin-top:10px">
           <button class="btn ghost sm" id="copyBtn" type="button">Copier</button>
           <button class="btn ghost sm" id="importBtn" type="button">Importer</button>
         </div>
+        <button class="btn ghost sm" id="fileBtn" type="button" style="margin-top:10px">Choisir un fichier…</button>
+        <input type="file" id="backupFile" accept="application/json,.json,.txt" hidden>
         <p class="err" id="backupMsg"></p>
       </div>
       <button class="btn danger" id="resetBtn" type="button">Charger les données d'exemple</button>
@@ -412,6 +414,10 @@ create policy "supprimer ses données" on public.carnets for delete to authentic
 
 <!-- Verrou / comptes -->
 <div class="lock" id="lock">
+  <nav class="lock-bar" id="lockBar" aria-label="Navigation">
+    <a class="lock-brand" href="./" aria-label="Retour à la page d'accueil de MORE"><svg class="mark" viewBox="0 0 256 256" aria-hidden="true"><path class="mk-m" d="M46 204 L84 112 L124 170 L174 60 L212 204"/><path class="mk-g" d="M124 170 L174 60"/></svg><span>MORE</span></a>
+    <a class="lock-home" href="./">Accueil</a>
+  </nav>
   <div class="lock-card glass" id="lockCard">
     <div class="lock-logo"><svg class="mark" viewBox="0 0 256 256" aria-hidden="true"><path class="mk-m" d="M46 204 L84 112 L124 170 L174 60 L212 204" pathLength="1"/><path class="mk-g" d="M124 170 L174 60" pathLength="1"/></svg></div>
     <h1 class="wordmark">MORE</h1>
@@ -467,8 +473,8 @@ create policy "supprimer ses données" on public.carnets for delete to authentic
 <script src="js/form.js?v=477cc488fe"></script>
 <script src="js/exercise.js?v=576ed1fb5f"></script>
 <script src="js/workout.js?v=ee1e568e97"></script>
-<script src="js/sync.js?v=2281e08548"></script>
-<script src="js/settings.js?v=afe6c8b6d3"></script>
-<script src="js/app.js?v=072cd5e554"></script>
+<script src="js/sync.js?v=e072996341"></script>
+<script src="js/settings.js?v=d4278fba1f"></script>
+<script src="js/app.js?v=125ec7730e"></script>
 </body>
 </html>
