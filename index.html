@@ -361,7 +361,7 @@
           <button class="btn sm" id="sbLogin" type="button">Se connecter</button>
           <button class="btn ghost sm" id="sbSignup" type="button">Créer le compte</button>
         </div>
-        <details><summary>Préparer Supabase (une seule fois)</summary>
+        <details id="sbSetup"><summary>Préparer Supabase (une seule fois)</summary>
           <div class="explain">
             <div>1. Crée un projet gratuit sur supabase.com.<br>2. Dans « SQL Editor », colle et lance ce code :</div>
           </div>
@@ -425,7 +425,20 @@ create policy "supprimer ses données" on public.carnets for delete to authentic
         <button class="btn" type="submit" id="loginBtn">Déverrouiller</button>
       </form>
       <button type="button" class="btn ghost" id="newAccBtn" style="margin-top:12px">Créer un compte</button>
+      <button type="button" class="btn ghost" id="restoreAccBtn" style="margin-top:10px">J'ai déjà un compte en ligne</button>
     </div>
+    <form id="restoreForm" novalidate hidden>
+      <p class="set-note" style="margin:0 0 16px;text-align:center">Retrouve ton compte et tes séances sur ce téléphone.</p>
+      <div class="field" id="rUrlF"><label for="rUrl">Adresse du projet Supabase</label><input class="input" id="rUrl" placeholder="https://xxxx.supabase.co" autocomplete="off" autocapitalize="off"></div>
+      <div class="field" id="rKeyF"><label for="rKey">Clé publique (anon key)</label><input class="input" id="rKey" autocomplete="off" autocapitalize="off"></div>
+      <div class="field"><label for="rEmail">E-mail</label><input class="input" id="rEmail" type="email" autocomplete="username" autocapitalize="off" spellcheck="false"></div>
+      <div class="field"><label for="rPw">Mot de passe</label><input class="input" id="rPw" type="password" autocomplete="current-password"></div>
+      <div class="field"><label for="rPhrase">Phrase secrète</label><input class="input" id="rPhrase" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+      <p class="hint" style="margin:10px 0 0">Ce mot de passe servira aussi à déverrouiller MORE sur ce téléphone.</p>
+      <p class="err" id="restoreErr" role="alert"></p>
+      <button class="btn" type="submit" id="restoreBtn">Se connecter</button>
+      <button type="button" class="btn ghost" id="cancelRestore" style="margin-top:10px">Annuler</button>
+    </form>
     <form id="createForm" novalidate hidden>
       <div class="field"><label for="cName">E-mail ou pseudo</label><input class="input" id="cName" maxlength="60" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="ex. thomas@icloud.com"></div>
       <div class="field"><label for="cPw">Mot de passe (8 caractères minimum)</label><input class="input" id="cPw" type="password" autocomplete="new-password"></div>

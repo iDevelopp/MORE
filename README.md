@@ -41,6 +41,7 @@ js/sync.js               Synchronisation Supabase (optionnelle)
 js/settings.js           Réglages
 js/app.js                Navigation, animations, verrou, démarrage
 assets/                  Icônes de l'application
+.htaccess                En-têtes de sécurité (hébergement Apache)
 supabase/schema.sql      Table et règles de sécurité pour Supabase
 ```
 
@@ -102,6 +103,22 @@ Avant chaque envoi, MORE chiffre le carnet **sur le téléphone** (AES-GCM 256 b
 |---|---|
 | `demo` | `true` crée un compte de démonstration « Moi » (mot de passe `1234`) au premier lancement. **Laisser `false` en usage réel.** |
 | `version` | Numéro affiché dans les Réglages. |
+| `supabaseUrl` | Adresse du projet Supabase. Si renseignée avec `supabaseKey`, les utilisateurs n'ont plus à la saisir. |
+| `supabaseKey` | Clé **anon public** (legacy, commence par `eyJ…`). Elle peut être publique : la protection repose sur les règles RLS. Ne jamais mettre la clé `service_role`. |
+| `allowSignup` | `false` masque le bouton « Créer le compte » : inscriptions sur invitation uniquement. |
+
+## Inviter des proches
+
+1. Renseigne `supabaseUrl` et `supabaseKey` dans `js/config.js`, mets `allowSignup: false`, puis publie.
+2. Dans Supabase : **Authentication → Users → Add user → Create new user** (e-mail + mot de passe provisoire, *Auto Confirm User* coché). Transmets-lui ces identifiants.
+3. Il ouvre l'adresse de l'app, crée son compte MORE local, puis **Réglages → Synchronisation** : e-mail, mot de passe et **sa propre phrase secrète** → **Se connecter**.
+4. Laisse **Allow new users to sign up** désactivé : personne ne peut s'inscrire sans ton invitation.
+
+Chacun a ses données chiffrées avec sa propre phrase : personne, toi compris, ne peut lire celles des autres.
+
+## Héberger ailleurs (alwaysdata, Apache…)
+
+Le site est statique : il suffit de copier les fichiers dans le dossier web (par SFTP ou `git pull`). Le fichier `.htaccess` fourni ajoute des en-têtes de sécurité que GitHub Pages ne permet pas (CSP avec `frame-ancestors`, HSTS, `X-Frame-Options`, redirection HTTPS, blocage de `.git`). Après un changement d'adresse, mettre à jour *Site URL* dans Supabase.
 
 ## Développer en local
 

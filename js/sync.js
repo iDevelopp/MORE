@@ -66,7 +66,7 @@ function syncErr(e){
 }
 function sbAuth(signup){
   var msg = $("syncMsg"); msg.className = "err";
-  var cfg = { url: sbBase($("sbUrl").value), key: $("sbKey").value.trim() }, email = $("sbEmail").value.trim(), pw = $("sbPw").value;
+  var cfg = { url: CONFIG.supabaseUrl ? sbBase(CONFIG.supabaseUrl) : sbBase($("sbUrl").value), key: CONFIG.supabaseKey || $("sbKey").value.trim() }, email = $("sbEmail").value.trim(), pw = $("sbPw").value;
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.url)){ msg.textContent = "Colle l'adresse du projet, de la forme https://xxxx.supabase.co"; return; }
   if (cfg.key.length < 20){ msg.textContent = "Colle la clé « anon public » du projet."; return; }
   if (!isEmail(email) || pw.length < 8){ msg.textContent = "E-mail valide et mot de passe en ligne de 8 caractères minimum."; return; }
@@ -126,8 +126,12 @@ function schedulePush(){
   clearTimeout(pushTimer);
   pushTimer = setTimeout(function(){ sbPush().catch(function(e){ if (!pushWarned){ pushWarned = true; toast("Synchro en attente : " + syncErr(e).split(".")[0]); } }); }, 2500);
 }
+/* Si l'adresse et la clé Supabase sont dans js/config.js, l'utilisateur n'a plus à les saisir */
+var SB_PRESET = !!(CONFIG.supabaseUrl && CONFIG.supabaseKey);
 function paintSync(){
   var on = !!(state.sync && state.sync.access && state.sync.phrase);
+  $("sbUrl").closest(".field").hidden = SB_PRESET; $("sbKey").closest(".field").hidden = SB_PRESET;
+  $("sbSetup").hidden = SB_PRESET; $("sbSignup").hidden = SB_PRESET && CONFIG.allowSignup === false;
   $("syncForm").hidden = on; $("syncOn").hidden = !on;
   if (on) $("syncState").textContent = "Connecté en ligne : " + state.sync.email + (state.sync.last ? " · dernière synchro " + new Date(state.sync.last).toLocaleString("fr-FR", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) : "") + ". Chaque modification est chiffrée sur ce téléphone puis envoyée automatiquement : le serveur ne voit qu'un bloc illisible.";
   else {

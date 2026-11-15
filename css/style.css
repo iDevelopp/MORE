@@ -474,3 +474,4 @@ nav.tabs{position:fixed}
 .check-row[hidden]{display:none}
 .e2e-badge{display:flex;align-items:center;gap:14px;padding:14px 16px}
 .e2e-badge .set-ic{background:var(--accent);color:#000}
+.field[hidden],details[hidden]{display:none}

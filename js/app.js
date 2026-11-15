@@ -126,9 +126,10 @@ function paintAvSeg(){
   }).join("");
 }
 function showLock(){
-  $("lock").hidden = false; $("createForm").hidden = true; $("lockLogin").hidden = false;
+  $("lock").hidden = false; $("createForm").hidden = true; $("restoreForm").hidden = true; $("lockLogin").hidden = false;
+  $("restoreAccBtn").hidden = accounts.length >= MAX_ACC;
   if (!accounts.some(function(a){ return a.id === selectedAcc; })) selectedAcc = accounts.length === 1 ? accounts[0].id : null;
-  $("lockSub").textContent = accounts.length ? "Choisis ton compte" : "Crée ton premier compte";
+  $("lockSub").textContent = accounts.length ? "Choisis ton compte" : "Crée ton compte, ou connecte-toi s'il existe déjà";
   $("accList").innerHTML = accounts.map(function(a){
     return '<button type="button" class="acc" data-acc="'+a.id+'" aria-pressed="'+(selectedAcc === a.id)+'">'+avatar(a.name)+'<span class="who"><b>'+esc(displayName(a.name))+'</b>'+(isEmail(a.name) ? '<small>'+esc(a.name)+'</small>' : '')+'</span></button>';
   }).join("");
@@ -207,6 +208,45 @@ $("createForm").addEventListener("submit", function(e){
   }).catch(function(){ btn.disabled = false; btn.textContent = "Créer le compte"; $("createErr").textContent = "Impossible de créer le compte sur cet appareil."; });
 });
 $("lockBtn").addEventListener("click", logout);
+
+/* Se connecter avec un compte en ligne existant : récupère et déchiffre les séances, puis crée le compte local */
+$("restoreAccBtn").addEventListener("click", function(){
+  $("lockLogin").hidden = true; $("createForm").hidden = true; $("restoreForm").hidden = false; $("demoHint").hidden = true;
+  $("lockSub").textContent = "Connexion à ton compte en ligne";
+  $("rUrlF").hidden = SB_PRESET; $("rKeyF").hidden = SB_PRESET; $("restoreErr").textContent = ""; $("rEmail").focus();
+});
+$("cancelRestore").addEventListener("click", showLock);
+$("restoreForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  var btn = $("restoreBtn"), err = $("restoreErr"); if (btn.disabled) return;
+  err.className = "err";
+  var cfg = { url: SB_PRESET ? sbBase(CONFIG.supabaseUrl) : sbBase($("rUrl").value), key: SB_PRESET ? CONFIG.supabaseKey : $("rKey").value.trim() };
+  var email = $("rEmail").value.trim().toLowerCase(), pw = $("rPw").value, phrase = $("rPhrase").value;
+  if (!hasCrypto){ err.textContent = "Ce navigateur ne permet pas le chiffrement : ouvre MORE dans Safari via son adresse https."; return; }
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.url) || cfg.key.length < 20){ err.textContent = "Adresse du projet ou clé publique invalide."; return; }
+  if (!isEmail(email) || pw.length < 8){ err.textContent = "E-mail valide et mot de passe de 8 caractères minimum."; return; }
+  if (phrase.length < 12){ err.textContent = "Entre ta phrase secrète (12 caractères minimum)."; return; }
+  if (accounts.length >= MAX_ACC){ err.textContent = "3 comptes maximum sur ce téléphone."; return; }
+  if (accounts.some(function(a){ return a.name.toLowerCase() === email; })){ err.textContent = "Ce compte est déjà sur ce téléphone : touche-le dans la liste pour te connecter."; return; }
+  btn.disabled = true; btn.textContent = "Connexion…"; err.className = "err muted"; err.textContent = "Connexion…";
+  var tmp = null;
+  sbReq("/auth/v1/token?grant_type=password", { method: "POST", anon: true, body: { email: email, password: pw } }, cfg).then(function(j){
+    if (!j || !j.access_token || !j.user || !/^[0-9a-f-]{36}$/i.test(j.user.id || "")) throw new Error("Réponse inattendue du serveur");
+    tmp = { url: cfg.url, key: cfg.key, email: email, access: j.access_token, refresh: j.refresh_token, uid: j.user.id, last: 0, phrase: phrase, salt: null };
+    err.textContent = "Déchiffrement de tes séances…";
+    return sbFetchRow(tmp);
+  }).then(function(row){
+    return row ? e2eOpen(row.data, phrase) : { data: null };
+  }).then(function(res){
+    var d = normalize(res.data); if (res.salt) tmp.salt = res.salt;
+    d.sync = tmp; d.sync.last = Date.now(); d.updatedAt = d.updatedAt || Date.now();
+    return createAccount(email, pw, JSON.parse(JSON.stringify(d))).then(function(r){
+      session = { id: r.acc.id, name: r.acc.name, key: r.key }; selectedAcc = r.acc.id;
+      btn.disabled = false; btn.textContent = "Se connecter"; $("rPw").value = ""; $("rPhrase").value = ""; err.textContent = "";
+      enterApp(d); toast(d.entries.length ? "Bon retour " + displayName(email) + " : tes séances sont là" : "Connecté. Aucune séance en ligne pour l'instant.");
+    });
+  }).catch(function(e2){ btn.disabled = false; btn.textContent = "Se connecter"; err.className = "err"; err.textContent = syncErr(e2); });
+});
 var hiddenAt = 0;
 document.addEventListener("visibilitychange", function(){
   if (document.hidden){ hiddenAt = Date.now(); return; }
